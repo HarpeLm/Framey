@@ -1,10 +1,3 @@
-//
-//  MovieService.swift
-//  Framey
-//
-//  Created by Fabian Dargaud on 03/09/2026.
-//
-
 import Foundation
 
 struct TMDBResponse: Decodable {
@@ -23,8 +16,16 @@ struct TMDBMovie: Decodable {
 enum MovieService {
 
     static func fetchPopularMovies() async throws -> [MediaItemEntity] {
+        async let page1 = fetchPopularPage(1)
+        async let page2 = fetchPopularPage(2)
+        async let page3 = fetchPopularPage(3)
+        let (p1, p2, p3) = try await (page1, page2, page3)
+        return p1 + p2 + p3
+    }
+
+    private static func fetchPopularPage(_ page: Int) async throws -> [MediaItemEntity] {
         let apiKey = Secrets.tmdbApiKey
-        let urlString = "https://api.themoviedb.org/3/movie/popular?api_key=\(apiKey)&language=fr-FR"
+        let urlString = "https://api.themoviedb.org/3/movie/popular?api_key=\(apiKey)&language=fr-FR&page=\(page)"
 
         guard let url = URL(string: urlString) else {
             throw NetworkError.invalidURL
