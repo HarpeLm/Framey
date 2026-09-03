@@ -7,6 +7,7 @@ struct FrameyApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             MovieEntity.self,
+            WatchedMovie.self,
         ])
 
         let modelConfiguration = ModelConfiguration(

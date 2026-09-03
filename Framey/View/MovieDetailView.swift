@@ -1,16 +1,22 @@
-//
-//  MovieDetailView.swift
-//  Framey
-//
-//  Created by Fabian Dargaud on 03/09/2026.
-//
-
 import SwiftUI
+import SwiftData
 
 struct MovieDetailView: View {
     let movie: MovieEntity
     
     @State private var viewModel = MovieDetailViewModel()
+    @Environment(\.modelContext) private var modelContext
+    @Query private var watchedEntries: [WatchedMovie]
+    
+    init(movie: MovieEntity) {
+        self.movie = movie
+        let id = movie.id
+        _watchedEntries = Query(filter: #Predicate<WatchedMovie> { $0.movieId == id })
+    }
+    
+    private var watchedEntry: WatchedMovie? { watchedEntries.first }
+    private var isWatched: Bool { watchedEntry != nil }
+    private var rating: Int { watchedEntry?.rating ?? 0 }
     
     var body: some View {
         ScrollView {
@@ -28,6 +34,27 @@ struct MovieDetailView: View {
         .toolbarBackground(.hidden, for: .navigationBar)
         .navigationBarTitleDisplayMode(.inline)
         .task { await viewModel.loadDetails(id: movie.id) }
+    }
+    
+    // MARK: - Actions SwiftData
+    
+    private func toggleWatched() {
+        if let entry = watchedEntry {
+            modelContext.delete(entry)
+        } else {
+            modelContext.insert(WatchedMovie(movieId: movie.id))
+        }
+    }
+    
+    private func setRating(_ value: Int) {
+        let entry: WatchedMovie
+        if let existing = watchedEntry {
+            entry = existing
+        } else {
+            entry = WatchedMovie(movieId: movie.id)
+            modelContext.insert(entry)
+        }
+        entry.rating = (entry.rating == value) ? nil : value
     }
     
     // MARK: - Header backdrop + poster
@@ -94,11 +121,15 @@ struct MovieDetailView: View {
         return parts.joined(separator: " • ")
     }
     
-    // MARK: - Actions (à câbler dans l'étape SwiftData)
+    // MARK: - Actions
     
     private var actionsRow: some View {
         HStack(spacing: 0) {
-            actionButton("checkmark", "Vu") { }
+            actionButton(isWatched ? "checkmark.circle.fill" : "checkmark.circle",
+                         isWatched ? "Vu" : "Pas vu",
+                         tint: isWatched ? .green : .gray) {
+                toggleWatched()
+            }
             actionButton("eye", "Watchlist") { }
             actionButton("list.bullet.rectangle", "Liste") { }
             actionButton("heart", "Like") { }
@@ -106,31 +137,35 @@ struct MovieDetailView: View {
         .padding(.horizontal)
     }
     
-    private func actionButton(_ icon: String, _ title: String, action: @escaping () -> Void) -> some View {
+    private func actionButton(_ icon: String, _ title: String, tint: Color = .accentColor, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 6) {
                 Image(systemName: icon).font(.title3)
                 Text(title).font(.caption)
             }
             .frame(maxWidth: .infinity)
+            .foregroundStyle(tint)
         }
         .buttonStyle(.plain)
-        .foregroundStyle(.tint)
     }
-    
-    // MARK: - Ma note (placeholder, câblé plus tard)
+    // MARK: - Ma note interactive
     
     private var ratingCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Ma note").font(.headline)
             HStack(spacing: 8) {
-                ForEach(1...5, id: \.self) { _ in
-                    Image(systemName: "star")
-                        .font(.title2)
-                        .foregroundStyle(.gray.opacity(0.4))
+                ForEach(1...5, id: \.self) { star in
+                    Button {
+                        setRating(star)
+                    } label: {
+                        Image(systemName: star <= rating ? "star.fill" : "star")
+                            .font(.title2)
+                            .foregroundStyle(star <= rating ? Color.yellow : Color.gray.opacity(0.4))
+                    }
+                    .buttonStyle(.plain)
                 }
             }
-            Text("Ajouter une note")
+            Text(ratingLabel)
                 .font(.subheadline)
                 .foregroundStyle(.orange)
         }
@@ -138,6 +173,17 @@ struct MovieDetailView: View {
         .padding()
         .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
         .padding(.horizontal)
+    }
+    
+    private var ratingLabel: String {
+        switch rating {
+        case 0: "Ajouter une note"
+        case 1: "Nul"
+        case 2: "Bof"
+        case 3: "Bien"
+        case 4: "Très bien"
+        default: "Incroyable"
+        }
     }
     
     // MARK: - Synopsis
@@ -190,4 +236,5 @@ struct MovieDetailView: View {
         MovieDetailView(movie: MovieEntity(id: 157336, title: "Interstellar"))
             .preferredColorScheme(.dark)
     }
+    .modelContainer(for: [MovieEntity.self, WatchedMovie.self], inMemory: true)
 }
