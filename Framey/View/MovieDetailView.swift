@@ -6,11 +6,13 @@ struct MovieDetailView: View {
     
     @State private var viewModel = MovieDetailViewModel()
     @State private var showingAddToListSheet = false
+    @State private var reviewDraft: String = ""
     @Environment(\.modelContext) private var modelContext
     @Query private var watchedEntries: [WatchedEntry]
     @Query private var watchlistEntries: [WatchlistEntry]
     @Query private var listEntries: [ListItemEntry]
     @Query private var likeEntries: [LikeEntry]
+    @Query private var reviewEntries: [ReviewEntry]
     
     init(item: MediaItemEntity) {
         self.item = item
@@ -28,6 +30,9 @@ struct MovieDetailView: View {
         _likeEntries = Query(filter: #Predicate<LikeEntry> {
             $0.mediaId == id && $0.mediaTypeRaw == type
         })
+        _reviewEntries = Query(filter: #Predicate<ReviewEntry> {
+            $0.mediaId == id && $0.mediaTypeRaw == type
+        })
     }
     
     private var watchedEntry: WatchedEntry? { watchedEntries.first }
@@ -36,6 +41,8 @@ struct MovieDetailView: View {
     private var isInWatchlist: Bool { watchlistEntries.first != nil }
     private var isInAnyList: Bool { !listEntries.isEmpty }
     private var isLiked: Bool { likeEntries.first != nil }
+    private var existingReview: ReviewEntry? { reviewEntries.first }
+    private var hasReview: Bool { existingReview != nil && existingReview?.text.isEmpty == false }
     
     var body: some View {
         ScrollView {
@@ -43,6 +50,7 @@ struct MovieDetailView: View {
                 header
                 actionsRow
                 ratingCard
+                reviewSection
                 if !item.overview.isEmpty {
                     synopsisSection
                 }
@@ -52,7 +60,10 @@ struct MovieDetailView: View {
         }
         .toolbarBackground(.hidden, for: .navigationBar)
         .navigationBarTitleDisplayMode(.inline)
-        .task { await viewModel.loadDetails(id: item.id) }
+        .task {
+            await viewModel.loadDetails(id: item.id)
+            reviewDraft = existingReview?.text ?? ""
+        }
         .sheet(isPresented: $showingAddToListSheet) {
             AddToListSheet(item: item)
         }
@@ -108,7 +119,24 @@ struct MovieDetailView: View {
         }
     }
     
-    // MARK: - Header backdrop + poster
+    private func saveReview() {
+        let trimmed = reviewDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            if let existing = existingReview {
+                modelContext.delete(existing)
+            }
+            return
+        }
+        if let existing = existingReview {
+            existing.text = trimmed
+            existing.dateModified = .now
+        } else {
+            let entry = ReviewEntry(mediaId: item.id, mediaType: item.mediaType, text: trimmed)
+            modelContext.insert(entry)
+        }
+    }
+    
+    // MARK: - Header
     
     private var header: some View {
         ZStack(alignment: .bottomLeading) {
@@ -212,26 +240,49 @@ struct MovieDetailView: View {
         .buttonStyle(.plain)
     }
     
-    // MARK: - Ma note interactive
+    // MARK: - Ma note + moyenne TMDB
     
     private var ratingCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Ma note").font(.headline)
-            HStack(spacing: 8) {
-                ForEach(1...5, id: \.self) { star in
-                    Button {
-                        setRating(star)
-                    } label: {
-                        Image(systemName: star <= rating ? "star.fill" : "star")
-                            .font(.title2)
-                            .foregroundStyle(star <= rating ? Color.yellow : Color.gray.opacity(0.4))
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Ma note").font(.headline)
+                    HStack(spacing: 8) {
+                        ForEach(1...5, id: \.self) { star in
+                            Button {
+                                setRating(star)
+                            } label: {
+                                Image(systemName: star <= rating ? "star.fill" : "star")
+                                    .font(.title2)
+                                    .foregroundStyle(star <= rating ? Color.yellow : Color.gray.opacity(0.4))
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
-                    .buttonStyle(.plain)
+                    Text(ratingLabel)
+                        .font(.subheadline)
+                        .foregroundStyle(.orange)
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("Moyenne TMDB")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    HStack(spacing: 4) {
+                        Image(systemName: "star.fill")
+                            .foregroundStyle(.yellow)
+                        Text(viewModel.averageRatingText)
+                            .font(.title3.bold())
+                    }
+                    if !viewModel.voteCountText.isEmpty {
+                        Text(viewModel.voteCountText)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
-            Text(ratingLabel)
-                .font(.subheadline)
-                .foregroundStyle(.orange)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
@@ -248,6 +299,47 @@ struct MovieDetailView: View {
         case 4: "Très bien"
         default: "Incroyable"
         }
+    }
+    
+    // MARK: - Critique
+    
+    private var reviewSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Ma critique").font(.headline)
+                Spacer()
+                if hasReview {
+                    Button("Modifier") {
+                        reviewDraft = existingReview?.text ?? ""
+                    }
+                    .font(.caption)
+                }
+            }
+            
+            TextEditor(text: $reviewDraft)
+                .scrollContentBackground(.hidden)
+                .frame(minHeight: 120)
+                .padding(8)
+                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
+                .overlay(alignment: .topLeading) {
+                    if reviewDraft.isEmpty {
+                        Text("Partage ton avis sur ce film…")
+                            .foregroundStyle(.secondary)
+                            .padding(16)
+                            .allowsHitTesting(false)
+                    }
+                }
+            
+            Button {
+                saveReview()
+            } label: {
+                Text(hasReview ? "Mettre à jour" : "Publier")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.orange)
+        }
+        .padding(.horizontal)
     }
     
     // MARK: - Synopsis
@@ -300,5 +392,5 @@ struct MovieDetailView: View {
         MovieDetailView(item: MediaItemEntity(id: 157336, title: "Interstellar"))
             .preferredColorScheme(.dark)
     }
-    .modelContainer(for: [MediaItemEntity.self, WatchedEntry.self, WatchlistEntry.self, ListEntity.self, ListItemEntry.self, LikeEntry.self], inMemory: true)
+    .modelContainer(for: [MediaItemEntity.self, WatchedEntry.self, WatchlistEntry.self, ListEntity.self, ListItemEntry.self, LikeEntry.self, ReviewEntry.self], inMemory: true)
 }

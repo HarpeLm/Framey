@@ -11,6 +11,8 @@ struct MovieDetails: Decodable {
     let id: Int
     let title: String
     let runtime: Int?
+    let vote_average: Double?
+    let vote_count: Int?
     let genres: [Genre]
     let credits: Credits
 }

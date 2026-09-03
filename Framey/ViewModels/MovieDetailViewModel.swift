@@ -25,6 +25,16 @@ final class MovieDetailViewModel {
         details?.genres.map(\.name).joined(separator: ", ") ?? "—"
     }
     
+    var averageRatingText: String {
+        guard let avg = details?.vote_average, avg > 0 else { return "—" }
+        return String(format: "%.1f", avg)
+    }
+    
+    var voteCountText: String {
+        guard let count = details?.vote_count, count > 0 else { return "" }
+        return "(\(count.formatted()) notes)"
+    }
+    
     func loadDetails(id: Int) async {
         details = try? await MovieService.fetchMovieDetails(id: id)
     }
