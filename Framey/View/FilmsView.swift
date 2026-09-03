@@ -27,8 +27,8 @@ struct FilmsView: View {
                 }
             }
             .navigationTitle("Films populaires")
-            .navigationDestination(for: MovieEntity.self) { movie in
-                MovieDetailView(movie: movie)
+            .navigationDestination(for: MediaItemEntity.self) { item in
+                MovieDetailView(item: item)
             }
             .task {
                 await viewModel.loadPopularMovies()
@@ -80,7 +80,7 @@ struct FilmsView: View {
 }
 
 struct MoviePosterCard: View {
-    let movie: MovieEntity
+    let movie: MediaItemEntity
     
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {

@@ -12,7 +12,7 @@ import Observation
 final class FilmsViewModel {
     
     // MARK: - État public (observé par la vue)
-    var movies: [MovieEntity] = []
+    var movies: [MediaItemEntity] = []
     var isLoading: Bool = false
     var errorMessage: String?
     

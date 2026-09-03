@@ -2,19 +2,22 @@ import SwiftUI
 import SwiftData
 
 struct MovieDetailView: View {
-    let movie: MovieEntity
+    let item: MediaItemEntity
     
     @State private var viewModel = MovieDetailViewModel()
     @Environment(\.modelContext) private var modelContext
-    @Query private var watchedEntries: [WatchedMovie]
+    @Query private var watchedEntries: [WatchedEntry]
     
-    init(movie: MovieEntity) {
-        self.movie = movie
-        let id = movie.id
-        _watchedEntries = Query(filter: #Predicate<WatchedMovie> { $0.movieId == id })
+    init(item: MediaItemEntity) {
+        self.item = item
+        let id = item.id
+        let type = item.mediaTypeRaw
+        _watchedEntries = Query(filter: #Predicate<WatchedEntry> {
+            $0.mediaId == id && $0.mediaTypeRaw == type
+        })
     }
     
-    private var watchedEntry: WatchedMovie? { watchedEntries.first }
+    private var watchedEntry: WatchedEntry? { watchedEntries.first }
     private var isWatched: Bool { watchedEntry != nil }
     private var rating: Int { watchedEntry?.rating ?? 0 }
     
@@ -24,7 +27,7 @@ struct MovieDetailView: View {
                 header
                 actionsRow
                 ratingCard
-                if !movie.overview.isEmpty {
+                if !item.overview.isEmpty {
                     synopsisSection
                 }
                 informationsSection
@@ -33,7 +36,7 @@ struct MovieDetailView: View {
         }
         .toolbarBackground(.hidden, for: .navigationBar)
         .navigationBarTitleDisplayMode(.inline)
-        .task { await viewModel.loadDetails(id: movie.id) }
+        .task { await viewModel.loadDetails(id: item.id) }
     }
     
     // MARK: - Actions SwiftData
@@ -42,16 +45,16 @@ struct MovieDetailView: View {
         if let entry = watchedEntry {
             modelContext.delete(entry)
         } else {
-            modelContext.insert(WatchedMovie(movieId: movie.id))
+            modelContext.insert(WatchedEntry(mediaId: item.id, mediaType: item.mediaType))
         }
     }
     
     private func setRating(_ value: Int) {
-        let entry: WatchedMovie
+        let entry: WatchedEntry
         if let existing = watchedEntry {
             entry = existing
         } else {
-            entry = WatchedMovie(movieId: movie.id)
+            entry = WatchedEntry(mediaId: item.id, mediaType: item.mediaType)
             modelContext.insert(entry)
         }
         entry.rating = (entry.rating == value) ? nil : value
@@ -64,7 +67,7 @@ struct MovieDetailView: View {
             Color.clear
                 .frame(height: 340)
                 .overlay {
-                    AsyncImage(url: movie.backdropPath?.tmdbPosterURL(size: .w780)) { image in
+                    AsyncImage(url: item.backdropPath?.tmdbPosterURL(size: .w780)) { image in
                         image.resizable().scaledToFill()
                     } placeholder: {
                         Rectangle().fill(.gray.opacity(0.3))
@@ -80,7 +83,7 @@ struct MovieDetailView: View {
             HStack(alignment: .bottom, spacing: 16) {
                 posterView
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(movie.title)
+                    Text(item.title)
                         .font(.title2.bold())
                         .foregroundStyle(.white)
                     Text(metaLine)
@@ -99,7 +102,7 @@ struct MovieDetailView: View {
     }
     
     private var posterView: some View {
-        AsyncImage(url: movie.posterPath?.tmdbPosterURL(size: .w342)) { image in
+        AsyncImage(url: item.posterPath?.tmdbPosterURL(size: .w342)) { image in
             image.resizable().scaledToFill()
         } placeholder: {
             Rectangle().fill(.gray.opacity(0.3)).overlay(ProgressView())
@@ -111,7 +114,7 @@ struct MovieDetailView: View {
     
     private var metaLine: String {
         var parts: [String] = []
-        if let year = movie.releaseDate?.formatted(.dateTime.year()) {
+        if let year = item.releaseDate?.formatted(.dateTime.year()) {
             parts.append(year)
         }
         if viewModel.details != nil {
@@ -148,6 +151,7 @@ struct MovieDetailView: View {
         }
         .buttonStyle(.plain)
     }
+    
     // MARK: - Ma note interactive
     
     private var ratingCard: some View {
@@ -191,7 +195,7 @@ struct MovieDetailView: View {
     private var synopsisSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Synopsis").font(.headline)
-            Text(movie.overview)
+            Text(item.overview)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
@@ -205,7 +209,7 @@ struct MovieDetailView: View {
             Text("Informations").font(.headline)
             VStack(spacing: 0) {
                 infoRow("calendar", "Sortie",
-                        movie.releaseDate?.formatted(date: .long, time: .omitted) ?? "—")
+                        item.releaseDate?.formatted(date: .long, time: .omitted) ?? "—")
                 Divider()
                 infoRow("clock", "Durée", viewModel.runtimeText)
                 Divider()
@@ -233,8 +237,8 @@ struct MovieDetailView: View {
 
 #Preview {
     NavigationStack {
-        MovieDetailView(movie: MovieEntity(id: 157336, title: "Interstellar"))
+        MovieDetailView(item: MediaItemEntity(id: 157336, title: "Interstellar"))
             .preferredColorScheme(.dark)
     }
-    .modelContainer(for: [MovieEntity.self, WatchedMovie.self], inMemory: true)
+    .modelContainer(for: [MediaItemEntity.self, WatchedEntry.self], inMemory: true)
 }

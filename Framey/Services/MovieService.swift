@@ -22,7 +22,7 @@ struct TMDBMovie: Decodable {
 
 enum MovieService {
 
-    static func fetchPopularMovies() async throws -> [MovieEntity] {
+    static func fetchPopularMovies() async throws -> [MediaItemEntity] {
         let apiKey = Secrets.tmdbApiKey
         let urlString = "https://api.themoviedb.org/3/movie/popular?api_key=\(apiKey)&language=fr-FR"
 
@@ -43,7 +43,7 @@ enum MovieService {
         let result = try decoder.decode(TMDBResponse.self, from: data)
 
         return result.results.map { movie in
-            MovieEntity(
+            MediaItemEntity(
                 id: movie.id,
                 title: movie.title,
                 releaseDate: movie.release_date?.toDate(),

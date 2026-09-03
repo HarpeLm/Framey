@@ -8,16 +8,23 @@ import Foundation
 import SwiftData
 
 @Model
-final class MovieEntity {
+final class MediaItemEntity {
     var id: Int
+    var mediaTypeRaw: String
     var title: String
     var releaseDate: Date?
     var posterPath: String?
     var backdropPath: String?
     var overview: String
     
-    init(id: Int, title: String, releaseDate: Date? = nil, posterPath: String? = nil, backdropPath: String? = nil, overview: String = "") {
+    var mediaType: MediaType {
+        get { MediaType(rawValue: mediaTypeRaw) ?? .movie }
+        set { mediaTypeRaw = newValue.rawValue }
+    }
+    
+    init(id: Int, mediaType: MediaType = .movie, title: String, releaseDate: Date? = nil, posterPath: String? = nil, backdropPath: String? = nil, overview: String = "") {
         self.id = id
+        self.mediaTypeRaw = mediaType.rawValue
         self.title = title
         self.releaseDate = releaseDate
         self.posterPath = posterPath
