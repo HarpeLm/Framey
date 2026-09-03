@@ -11,6 +11,7 @@ import Observation
 @Observable
 final class MovieDetailViewModel {
     private(set) var details: MovieDetails?
+    private(set) var providers: [WatchProvider] = []
     
     var director: String? {
         details?.credits.crew.first { $0.job == "Director" }?.name
@@ -36,6 +37,12 @@ final class MovieDetailViewModel {
     }
     
     func loadDetails(id: Int) async {
-        details = try? await MovieService.fetchMovieDetails(id: id)
+        let region = Locale.current.region?.identifier ?? "FR"
+        
+        async let detailsResult = MovieService.fetchMovieDetails(id: id)
+        async let providersResult = MovieService.fetchWatchProviders(id: id, region: region)
+        
+        details = try? await detailsResult
+        providers = (try? await providersResult) ?? []
     }
 }

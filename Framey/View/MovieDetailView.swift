@@ -54,6 +54,7 @@ struct MovieDetailView: View {
                 if !item.overview.isEmpty {
                     synopsisSection
                 }
+                streamingSection
                 informationsSection
             }
             .padding(.bottom, 32)
@@ -136,7 +137,7 @@ struct MovieDetailView: View {
         }
     }
     
-    // MARK: - Header
+    // MARK: - Header backdrop + poster
     
     private var header: some View {
         ZStack(alignment: .bottomLeading) {
@@ -301,7 +302,7 @@ struct MovieDetailView: View {
         }
     }
     
-    // MARK: - Critique
+    // MARK: - Ma critique
     
     private var reviewSection: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -350,6 +351,44 @@ struct MovieDetailView: View {
             Text(item.overview)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal)
+    }
+    
+    // MARK: - Où regarder
+    
+    private var streamingSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Où regarder").font(.headline)
+            
+            if viewModel.providers.isEmpty {
+                Text("Non disponible en streaming")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(viewModel.providers) { provider in
+                            VStack(spacing: 4) {
+                                AsyncImage(url: provider.logo_path?.tmdbPosterURL(size: .w185)) { image in
+                                    image.resizable().scaledToFill()
+                                } placeholder: {
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(.gray.opacity(0.3))
+                                }
+                                .frame(width: 60, height: 60)
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                
+                                Text(provider.provider_name)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                            .frame(width: 70)
+                        }
+                    }
+                }
+            }
         }
         .padding(.horizontal)
     }
