@@ -17,6 +17,7 @@ struct TMDBMovie: Decodable {
     let title: String
     let release_date: String?
     let poster_path: String?
+    let backdrop_path: String?
     let overview: String
 }
 
@@ -51,8 +52,10 @@ enum MovieService {
             MovieEntity(
                 id: movie.id,
                 title: movie.title,
-                releaseDate: movie.release_date?.toDate(), // Conversion String → Date
-                posterPath: movie.poster_path
+                releaseDate: movie.release_date?.toDate(),
+                posterPath: movie.poster_path,
+                backdropPath: movie.backdrop_path,
+                overview: movie.overview
             )
         }
     }

@@ -9,15 +9,19 @@ import SwiftData
 
 @Model
 final class MovieEntity {
-    var id:Int
+    var id: Int
     var title: String
     var releaseDate: Date?
     var posterPath: String?
+    var backdropPath: String?
+    var overview: String
     
-    init(id: Int, title: String, releaseDate: Date? = nil, posterPath: String? = nil) {
+    init(id: Int, title: String, releaseDate: Date? = nil, posterPath: String? = nil, backdropPath: String? = nil, overview: String = "") {
         self.id = id
         self.title = title
         self.releaseDate = releaseDate
         self.posterPath = posterPath
+        self.backdropPath = backdropPath
+        self.overview = overview
     }
 }

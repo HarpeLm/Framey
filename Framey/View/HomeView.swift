@@ -27,13 +27,14 @@ struct HomeView: View {
                 }
             }
             .navigationTitle("Films populaires")
+            .navigationDestination(for: MovieEntity.self) { movie in
+                MovieDetailView(movie: movie)
+            }
             .task {
                 await viewModel.loadPopularMovies()
             }
         }
     }
-    
-    // MARK: - Sous-vues
     
     private var loadingView: some View {
         VStack {
@@ -67,15 +68,16 @@ struct HomeView: View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(viewModel.movies, id: \.id) { movie in
-                    MoviePosterCard(movie: movie)
+                    NavigationLink(value: movie) {
+                        MoviePosterCard(movie: movie)
+                    }
+                    .buttonStyle(.plain) // évite la teinte bleue par défaut du lien
                 }
             }
             .padding()
         }
     }
 }
-
-// MARK: - Composant réutilisable : carte poster
 
 struct MoviePosterCard: View {
     let movie: MovieEntity
