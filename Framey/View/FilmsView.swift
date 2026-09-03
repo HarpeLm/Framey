@@ -1,5 +1,5 @@
 //
-//  HomeView.swift
+//  FilmsView.swift
 //  Framey
 //
 //  Created by Fabian Dargaud on 03/09/2026.
@@ -7,9 +7,9 @@
 
 import SwiftUI
 
-struct HomeView: View {
+struct FilmsView: View {
     
-    @State private var viewModel = HomeViewModel()
+    @State private var viewModel = FilmsViewModel()
     
     private let columns = [
         GridItem(.adaptive(minimum: 100), spacing: 12)
@@ -117,5 +117,5 @@ struct MoviePosterCard: View {
 }
 
 #Preview {
-    HomeView()
+    FilmsView()
 }

@@ -1,5 +1,5 @@
 //
-//  HomeViewModel.swift
+//  FilmsViewModel.swift
 //  Framey
 //
 //  Created by Fabian Dargaud on 03/09/2026.
@@ -9,7 +9,7 @@ import Foundation
 import Observation
 
 @Observable
-final class HomeViewModel {
+final class FilmsViewModel {
     
     // MARK: - État public (observé par la vue)
     var movies: [MovieEntity] = []

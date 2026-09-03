@@ -24,8 +24,8 @@ struct FrameyApp: App {
 
     var body: some Scene {
         WindowGroup {
-            HomeView()
-                .preferredColorScheme(.dark) 
+            FilmsView()
+                .preferredColorScheme(.dark)
         }
         .modelContainer(sharedModelContainer)
     }
