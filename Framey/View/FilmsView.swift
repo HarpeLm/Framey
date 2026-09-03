@@ -110,11 +110,12 @@ struct MoviePosterCard: View {
             
             Text(movie.title)
                 .font(.caption)
-                .lineLimit(2)
+                .lineLimit(2, reservesSpace: true)
                 .foregroundStyle(.primary)
         }
     }
 }
+
 
 #Preview {
     FilmsView()
