@@ -7,7 +7,6 @@
 
 import Foundation
 
-
 struct TMDBResponse: Decodable {
     let results: [TMDBMovie]
 }
@@ -21,33 +20,28 @@ struct TMDBMovie: Decodable {
     let overview: String
 }
 
-
 enum MovieService {
 
-    
     static func fetchPopularMovies() async throws -> [MovieEntity] {
-
         let apiKey = Secrets.tmdbApiKey
         let urlString = "https://api.themoviedb.org/3/movie/popular?api_key=\(apiKey)&language=fr-FR"
-        
 
         guard let url = URL(string: urlString) else {
             throw NetworkError.invalidURL
         }
-        
 
         let (data, response) = try await URLSession.shared.data(from: url)
-        
+
         guard let httpResponse = response as? HTTPURLResponse,
               httpResponse.statusCode == 200 else {
             throw NetworkError.serverError
         }
-        
+
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .formatted(.tmdbDateFormatter)
-        
+
         let result = try decoder.decode(TMDBResponse.self, from: data)
-        
+
         return result.results.map { movie in
             MovieEntity(
                 id: movie.id,
@@ -58,6 +52,23 @@ enum MovieService {
                 overview: movie.overview
             )
         }
+    }
+
+    static func fetchMovieDetails(id: Int) async throws -> MovieDetails {
+        let urlString = "https://api.themoviedb.org/3/movie/\(id)?api_key=\(Secrets.tmdbApiKey)&language=fr-FR&append_to_response=credits"
+
+        guard let url = URL(string: urlString) else {
+            throw NetworkError.invalidURL
+        }
+
+        let (data, response) = try await URLSession.shared.data(from: url)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw NetworkError.serverError
+        }
+
+        return try JSONDecoder().decode(MovieDetails.self, from: data)
     }
 }
 
