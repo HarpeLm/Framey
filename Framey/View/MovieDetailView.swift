@@ -5,9 +5,11 @@ struct MovieDetailView: View {
     let item: MediaItemEntity
     
     @State private var viewModel = MovieDetailViewModel()
+    @State private var showingAddToListSheet = false
     @Environment(\.modelContext) private var modelContext
     @Query private var watchedEntries: [WatchedEntry]
     @Query private var watchlistEntries: [WatchlistEntry]
+    @Query private var listEntries: [ListItemEntry]
     
     init(item: MediaItemEntity) {
         self.item = item
@@ -19,12 +21,16 @@ struct MovieDetailView: View {
         _watchlistEntries = Query(filter: #Predicate<WatchlistEntry> {
             $0.mediaId == id && $0.mediaTypeRaw == type
         })
+        _listEntries = Query(filter: #Predicate<ListItemEntry> {
+            $0.mediaId == id && $0.mediaTypeRaw == type
+        })
     }
     
     private var watchedEntry: WatchedEntry? { watchedEntries.first }
     private var isWatched: Bool { watchedEntry != nil }
     private var rating: Int { watchedEntry?.rating ?? 0 }
     private var isInWatchlist: Bool { watchlistEntries.first != nil }
+    private var isInAnyList: Bool { !listEntries.isEmpty }
     
     var body: some View {
         ScrollView {
@@ -42,6 +48,9 @@ struct MovieDetailView: View {
         .toolbarBackground(.hidden, for: .navigationBar)
         .navigationBarTitleDisplayMode(.inline)
         .task { await viewModel.loadDetails(id: item.id) }
+        .sheet(isPresented: $showingAddToListSheet) {
+            AddToListSheet(item: item)
+        }
     }
     
     // MARK: - Actions SwiftData
@@ -164,7 +173,11 @@ struct MovieDetailView: View {
                          tint: isInWatchlist ? .blue : .gray) {
                 toggleWatchlist()
             }
-            actionButton("list.bullet.rectangle", "Liste") { }
+            actionButton(isInAnyList ? "list.bullet.rectangle.fill" : "list.bullet.rectangle",
+                         "Liste",
+                         tint: isInAnyList ? .purple : .gray) {
+                showingAddToListSheet = true
+            }
             actionButton("heart", "Like") { }
         }
         .padding(.horizontal)
