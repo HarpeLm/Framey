@@ -11,6 +11,7 @@ struct FrameyApp: App {
             WatchlistEntry.self,
             ListEntity.self,
             ListItemEntry.self,
+            LikeEntry.self,
         ])
 
         let modelConfiguration = ModelConfiguration(

@@ -10,6 +10,7 @@ struct MovieDetailView: View {
     @Query private var watchedEntries: [WatchedEntry]
     @Query private var watchlistEntries: [WatchlistEntry]
     @Query private var listEntries: [ListItemEntry]
+    @Query private var likeEntries: [LikeEntry]
     
     init(item: MediaItemEntity) {
         self.item = item
@@ -24,6 +25,9 @@ struct MovieDetailView: View {
         _listEntries = Query(filter: #Predicate<ListItemEntry> {
             $0.mediaId == id && $0.mediaTypeRaw == type
         })
+        _likeEntries = Query(filter: #Predicate<LikeEntry> {
+            $0.mediaId == id && $0.mediaTypeRaw == type
+        })
     }
     
     private var watchedEntry: WatchedEntry? { watchedEntries.first }
@@ -31,6 +35,7 @@ struct MovieDetailView: View {
     private var rating: Int { watchedEntry?.rating ?? 0 }
     private var isInWatchlist: Bool { watchlistEntries.first != nil }
     private var isInAnyList: Bool { !listEntries.isEmpty }
+    private var isLiked: Bool { likeEntries.first != nil }
     
     var body: some View {
         ScrollView {
@@ -60,7 +65,7 @@ struct MovieDetailView: View {
             modelContext.delete(entry)
         } else {
             modelContext.insert(WatchedEntry(mediaId: item.id, mediaType: item.mediaType))
-            removeFromWatchlist() // comportement Letterboxd : vu → sort de la watchlist
+            removeFromWatchlist()
         }
     }
     
@@ -73,7 +78,7 @@ struct MovieDetailView: View {
             modelContext.insert(entry)
         }
         entry.rating = (entry.rating == value) ? nil : value
-        removeFromWatchlist() // noté → sort de la watchlist
+        removeFromWatchlist()
     }
     
     private func toggleWatchlist() {
@@ -92,6 +97,14 @@ struct MovieDetailView: View {
     private func removeFromWatchlist() {
         if let entry = watchlistEntries.first {
             modelContext.delete(entry)
+        }
+    }
+    
+    private func toggleLike() {
+        if let entry = likeEntries.first {
+            modelContext.delete(entry)
+        } else {
+            modelContext.insert(LikeEntry(mediaId: item.id, mediaType: item.mediaType))
         }
     }
     
@@ -178,7 +191,11 @@ struct MovieDetailView: View {
                          tint: isInAnyList ? .purple : .gray) {
                 showingAddToListSheet = true
             }
-            actionButton("heart", "Like") { }
+            actionButton(isLiked ? "heart.fill" : "heart",
+                         "Like",
+                         tint: isLiked ? .red : .gray) {
+                toggleLike()
+            }
         }
         .padding(.horizontal)
     }
@@ -283,5 +300,5 @@ struct MovieDetailView: View {
         MovieDetailView(item: MediaItemEntity(id: 157336, title: "Interstellar"))
             .preferredColorScheme(.dark)
     }
-    .modelContainer(for: [MediaItemEntity.self, WatchedEntry.self, WatchlistEntry.self], inMemory: true)
+    .modelContainer(for: [MediaItemEntity.self, WatchedEntry.self, WatchlistEntry.self, ListEntity.self, ListItemEntry.self, LikeEntry.self], inMemory: true)
 }
