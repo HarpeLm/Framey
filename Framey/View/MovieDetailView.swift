@@ -7,6 +7,7 @@ struct MovieDetailView: View {
     @State private var viewModel = MovieDetailViewModel()
     @Environment(\.modelContext) private var modelContext
     @Query private var watchedEntries: [WatchedEntry]
+    @Query private var watchlistEntries: [WatchlistEntry]
     
     init(item: MediaItemEntity) {
         self.item = item
@@ -15,11 +16,15 @@ struct MovieDetailView: View {
         _watchedEntries = Query(filter: #Predicate<WatchedEntry> {
             $0.mediaId == id && $0.mediaTypeRaw == type
         })
+        _watchlistEntries = Query(filter: #Predicate<WatchlistEntry> {
+            $0.mediaId == id && $0.mediaTypeRaw == type
+        })
     }
     
     private var watchedEntry: WatchedEntry? { watchedEntries.first }
     private var isWatched: Bool { watchedEntry != nil }
     private var rating: Int { watchedEntry?.rating ?? 0 }
+    private var isInWatchlist: Bool { watchlistEntries.first != nil }
     
     var body: some View {
         ScrollView {
@@ -46,6 +51,7 @@ struct MovieDetailView: View {
             modelContext.delete(entry)
         } else {
             modelContext.insert(WatchedEntry(mediaId: item.id, mediaType: item.mediaType))
+            removeFromWatchlist() // comportement Letterboxd : vu → sort de la watchlist
         }
     }
     
@@ -58,6 +64,26 @@ struct MovieDetailView: View {
             modelContext.insert(entry)
         }
         entry.rating = (entry.rating == value) ? nil : value
+        removeFromWatchlist() // noté → sort de la watchlist
+    }
+    
+    private func toggleWatchlist() {
+        if let entry = watchlistEntries.first {
+            modelContext.delete(entry)
+        } else {
+            modelContext.insert(WatchlistEntry(
+                mediaId: item.id,
+                mediaType: item.mediaType,
+                title: item.title,
+                posterPath: item.posterPath
+            ))
+        }
+    }
+    
+    private func removeFromWatchlist() {
+        if let entry = watchlistEntries.first {
+            modelContext.delete(entry)
+        }
     }
     
     // MARK: - Header backdrop + poster
@@ -133,7 +159,11 @@ struct MovieDetailView: View {
                          tint: isWatched ? .green : .gray) {
                 toggleWatched()
             }
-            actionButton("eye", "Watchlist") { }
+            actionButton(isInWatchlist ? "eye.fill" : "eye",
+                         "Watchlist",
+                         tint: isInWatchlist ? .blue : .gray) {
+                toggleWatchlist()
+            }
             actionButton("list.bullet.rectangle", "Liste") { }
             actionButton("heart", "Like") { }
         }
@@ -240,5 +270,5 @@ struct MovieDetailView: View {
         MovieDetailView(item: MediaItemEntity(id: 157336, title: "Interstellar"))
             .preferredColorScheme(.dark)
     }
-    .modelContainer(for: [MediaItemEntity.self, WatchedEntry.self], inMemory: true)
+    .modelContainer(for: [MediaItemEntity.self, WatchedEntry.self, WatchlistEntry.self], inMemory: true)
 }

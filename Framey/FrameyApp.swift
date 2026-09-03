@@ -8,6 +8,7 @@ struct FrameyApp: App {
         let schema = Schema([
             MediaItemEntity.self,
             WatchedEntry.self,
+            WatchlistEntry.self,
         ])
 
         let modelConfiguration = ModelConfiguration(
