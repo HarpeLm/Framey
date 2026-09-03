@@ -48,16 +48,6 @@
 			path = Framey;
 			sourceTree = "<group>";
 		};
-		705A0AD03049DD9900CA600A /* FrameyTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = FrameyTests;
-			sourceTree = "<group>";
-		};
-		705A0ADA3049DD9900CA600A /* FrameyUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = FrameyUITests;
-			sourceTree = "<group>";
-		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -89,8 +79,6 @@
 			isa = PBXGroup;
 			children = (
 				705A0ABE3049DD9800CA600A /* Framey */,
-				705A0AD03049DD9900CA600A /* FrameyTests */,
-				705A0ADA3049DD9900CA600A /* FrameyUITests */,
 				705A0ABD3049DD9800CA600A /* Products */,
 			);
 			sourceTree = "<group>";
@@ -143,9 +131,6 @@
 			dependencies = (
 				705A0ACF3049DD9900CA600A /* PBXTargetDependency */,
 			);
-			fileSystemSynchronizedGroups = (
-				705A0AD03049DD9900CA600A /* FrameyTests */,
-			);
 			name = FrameyTests;
 			packageProductDependencies = (
 			);
@@ -165,9 +150,6 @@
 			);
 			dependencies = (
 				705A0AD93049DD9900CA600A /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				705A0ADA3049DD9900CA600A /* FrameyUITests */,
 			);
 			name = FrameyUITests;
 			packageProductDependencies = (

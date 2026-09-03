@@ -1,20 +1,18 @@
-//
-//  FrameyApp.swift
-//  Framey
-//
-//  Created by Fabian Dargaud on 03/09/2026.
-//
-
 import SwiftUI
 import SwiftData
 
 @main
 struct FrameyApp: App {
+
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            MovieEntity.self,
         ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+
+        let modelConfiguration = ModelConfiguration(
+            schema: schema,
+            isStoredInMemoryOnly: false
+        )
 
         do {
             return try ModelContainer(for: schema, configurations: [modelConfiguration])
@@ -25,7 +23,7 @@ struct FrameyApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            HomeView()
         }
         .modelContainer(sharedModelContainer)
     }
