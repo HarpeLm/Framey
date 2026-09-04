@@ -35,9 +35,11 @@ struct FeaturedHeroCard: View {
                 Text(movie.overview)
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.85))
-                    .lineLimit(3)
+                    .lineLimit(2)
             }
-            .padding(16)
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 40)
         }
         .overlay(alignment: .topLeading) {
             HStack {
