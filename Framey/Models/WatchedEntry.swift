@@ -14,7 +14,7 @@ final class WatchedEntry {
     
     var mediaId: Int
     var mediaTypeRaw: String
-    var title: String
+    var title: String = ""
     var posterPath: String?
     var dateWatched: Date
     var rating: Int?

@@ -76,7 +76,10 @@ struct MovieDetailView: View {
         if let entry = watchedEntry {
             modelContext.delete(entry)
         } else {
-            modelContext.insert(WatchedEntry(mediaId: item.id, mediaType: item.mediaType))
+            modelContext.insert(WatchedEntry(mediaId: item.id,
+                                             mediaType: item.mediaType,
+                                             title: item.title,
+                                             posterPath: item.posterPath))
             removeFromWatchlist()
         }
     }
@@ -86,7 +89,10 @@ struct MovieDetailView: View {
         if let existing = watchedEntry {
             entry = existing
         } else {
-            entry = WatchedEntry(mediaId: item.id, mediaType: item.mediaType)
+            entry = WatchedEntry(mediaId: item.id,
+                                 mediaType: item.mediaType,
+                                 title: item.title,
+                                 posterPath: item.posterPath)
             modelContext.insert(entry)
         }
         entry.rating = (entry.rating == value) ? nil : value

@@ -1,16 +1,10 @@
-//
-//  HomeView.swift
-//  Framey
-//
-//  Created by Fabian Dargaud on 04/09/2026.
-//
-
 import SwiftUI
 import SwiftData
 
 struct HomeView: View {
     @State private var viewModel = HomeViewModel()
     @State private var selectedTab: HomeTab = .accueil
+    @State private var selectedDay = Date.now
     @Query(sort: \WatchlistEntry.dateAdded, order: .reverse) private var watchlist: [WatchlistEntry]
     @Query(sort: \WatchedEntry.dateWatched, order: .reverse) private var watched: [WatchedEntry]
     @Query(sort: \ListEntity.dateCreated) private var lists: [ListEntity]
@@ -21,6 +15,10 @@ struct HomeView: View {
     
     private var featured: [MediaItemEntity] {
         viewModel.featuredMovies(excludingWatchedIds: watchedIds)
+    }
+    
+    private var dayReleases: [MediaItemEntity] {
+        viewModel.releases(on: selectedDay)
     }
     
     var body: some View {
@@ -60,6 +58,10 @@ struct HomeView: View {
                                 }
                             }
                             
+                            if !viewModel.weekReleases.isEmpty {
+                                cinemaSection
+                            }
+                            
                             if !lists.isEmpty {
                                 listsRow
                             }
@@ -75,7 +77,39 @@ struct HomeView: View {
         .task { await viewModel.load() }
     }
     
-    // MARK: - Rangée Listes (cartes spécifiques, pas des posters)
+    // MARK: - Au cinéma cette semaine
+    
+    private var cinemaSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Au cinéma cette semaine")
+                .font(.headline)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 20)
+            
+            WeekStrip(days: viewModel.weekDays,
+                      selectedDay: $selectedDay,
+                      hasReleases: viewModel.hasReleases)
+            
+            if dayReleases.isEmpty {
+                Text("Aucune sortie ce jour 🎬")
+                    .font(.subheadline)
+                    .foregroundStyle(.gray)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 24)
+            } else {
+                MediaRow(title: "Sorties du jour", items: dayReleases) { movie in
+                    AnyView(
+                        NavigationLink(value: movie) {
+                            MediaPosterCard(title: movie.title, posterPath: movie.posterPath)
+                        }
+                        .buttonStyle(.plain)
+                    )
+                }
+            }
+        }
+    }
+    
+    // MARK: - Rangée Listes
     
     private var listsRow: some View {
         VStack(alignment: .leading, spacing: 12) {

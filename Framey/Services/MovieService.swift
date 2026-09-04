@@ -24,9 +24,23 @@ enum MovieService {
     }
 
     private static func fetchPopularPage(_ page: Int) async throws -> [MediaItemEntity] {
-        let apiKey = Secrets.tmdbApiKey
-        let urlString = "https://api.themoviedb.org/3/movie/popular?api_key=\(apiKey)&language=fr-FR&page=\(page)"
+        let urlString = "https://api.themoviedb.org/3/movie/popular?api_key=\(Secrets.tmdbApiKey)&language=fr-FR&page=\(page)"
+        return try await fetchMovies(urlString: urlString)
+    }
 
+    static func fetchWeekReleases(region: String) async throws -> [MediaItemEntity] {
+        async let nowPlaying = fetchMovies(urlString: releaseURL("now_playing", region: region))
+        async let upcoming = fetchMovies(urlString: releaseURL("upcoming", region: region))
+        let (n, u) = try await (nowPlaying, upcoming)
+        var seen = Set<Int>()
+        return (n + u).filter { seen.insert($0.id).inserted }
+    }
+
+    private static func releaseURL(_ endpoint: String, region: String) -> String {
+        "https://api.themoviedb.org/3/movie/\(endpoint)?api_key=\(Secrets.tmdbApiKey)&language=fr-FR&region=\(region)"
+    }
+
+    private static func fetchMovies(urlString: String) async throws -> [MediaItemEntity] {
         guard let url = URL(string: urlString) else {
             throw NetworkError.invalidURL
         }

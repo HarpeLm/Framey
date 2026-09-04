@@ -11,8 +11,20 @@ import Observation
 @Observable
 final class HomeViewModel {
     private(set) var allPopular: [MediaItemEntity] = []
+    private(set) var weekReleases: [MediaItemEntity] = []
     private(set) var isLoading = false
-    private(set) var errorMessage: String?
+    
+    func load() async {
+        isLoading = true
+        defer { isLoading = false }
+        let region = Locale.current.region?.identifier ?? "FR"
+        
+        async let popularResult = MovieService.fetchPopularMovies()
+        async let releasesResult = MovieService.fetchWeekReleases(region: region)
+        
+        allPopular = (try? await popularResult) ?? []
+        weekReleases = (try? await releasesResult) ?? []
+    }
     
     func featuredMovies(excludingWatchedIds watchedIds: Set<Int>) -> [MediaItemEntity] {
         allPopular
@@ -21,13 +33,22 @@ final class HomeViewModel {
             .map { $0 }
     }
     
-    func load() async {
-        isLoading = true
-        defer { isLoading = false }
-        do {
-            allPopular = try await MovieService.fetchPopularMovies()
-        } catch {
-            errorMessage = error.localizedDescription
+    // MARK: - Semaine cinéma
+    
+    var weekDays: [Date] {
+        let calendar = Calendar.current
+        guard let start = calendar.dateInterval(of: .weekOfYear, for: .now)?.start else { return [] }
+        return (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: start) }
+    }
+    
+    func releases(on day: Date) -> [MediaItemEntity] {
+        weekReleases.filter { movie in
+            guard let date = movie.releaseDate else { return false }
+            return Calendar.current.isDate(date, inSameDayAs: day)
         }
+    }
+    
+    func hasReleases(on day: Date) -> Bool {
+        !releases(on: day).isEmpty
     }
 }
