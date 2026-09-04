@@ -10,6 +10,7 @@ import SwiftUI
 struct MediaRow<Item: Identifiable>: View {
     let title: String
     let items: [Item]
+    var onSeeAll: (() -> Void)? = nil
     let card: (Item) -> AnyView
     
     var body: some View {
@@ -19,9 +20,11 @@ struct MediaRow<Item: Identifiable>: View {
                     .font(.headline)
                     .foregroundStyle(.white)
                 Spacer()
-                Button("Voir tout") { }
-                    .font(.caption)
-                    .foregroundStyle(.purple)
+                if let onSeeAll {
+                    Button("Voir tout", action: onSeeAll)
+                        .font(.caption)
+                        .foregroundStyle(.purple)
+                }
             }
             .padding(.horizontal, 20)
             
@@ -36,3 +39,4 @@ struct MediaRow<Item: Identifiable>: View {
         }
     }
 }
+

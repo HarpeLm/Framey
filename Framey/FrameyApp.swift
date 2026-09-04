@@ -3,7 +3,6 @@ import SwiftData
 
 @main
 struct FrameyApp: App {
-
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             MediaItemEntity.self,
@@ -29,7 +28,7 @@ struct FrameyApp: App {
 
     var body: some Scene {
         WindowGroup {
-            FilmsView()
+            MainTabView()
                 .preferredColorScheme(.dark)
         }
         .modelContainer(sharedModelContainer)
