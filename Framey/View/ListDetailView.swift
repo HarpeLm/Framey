@@ -26,8 +26,8 @@ struct ListDetailView: View {
     @State private var profilePhoto: Data?
     @State private var showingEdit = false
     @State private var showingAdd = false
-    @State private var showingDelete = false
     @State private var sort: ListSort = .manuel
+    @State private var selectedMovie: MediaItemEntity?
     
     private var ratingByMediaId: [Int: Int] {
         watched.reduce(into: [:]) { dict, entry in
@@ -38,7 +38,10 @@ struct ListDetailView: View {
     private var sortedItems: [ListItemEntry] {
         switch sort {
         case .manuel:
-            return list.items
+            return list.items.sorted {
+                if $0.position != $1.position { return $0.position < $1.position }
+                return $0.dateAdded < $1.dateAdded
+            }
         case .note:
             return list.items.sorted { (ratingByMediaId[$0.mediaId] ?? -1) > (ratingByMediaId[$1.mediaId] ?? -1) }
         case .titre:
@@ -48,20 +51,45 @@ struct ListDetailView: View {
         }
     }
     
+    // MARK: - Body : une List native
+    
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+        List {
+            Section {
                 header
-                rowsSection
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
+                    .listRowSeparator(.hidden)
             }
-            .padding(.top, 12)
-            .padding(.bottom, 40)
+            
+            Section {
+                if sortedItems.isEmpty {
+                    ContentUnavailableView("Liste vide",
+                                           systemImage: "list.bullet.rectangle",
+                                           description: Text("Ajoute des films avec le bouton Ajouter"))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                } else {
+                    ForEach(Array(sortedItems.enumerated()), id: \.element.persistentModelID) { index, entry in
+                        row(index: index, entry: entry)
+                            .listRowBackground(Color.clear)
+                            .listRowSeparatorTint(.white.opacity(0.08))
+                            .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
+                    }
+                    .onMove(perform: move)
+                    .moveDisabled(sort != .manuel)
+                }
+            } header: {
+                sortHeader
+            }
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
         .background(Color.black.ignoresSafeArea())
         .navigationTitle(list.name)
         .navigationBarTitleDisplayMode(.inline)
-        .navigationDestination(for: MediaItemEntity.self) { item in
-            MovieDetailView(item: item)
+        .navigationDestination(item: $selectedMovie) { movie in
+            MovieDetailView(item: movie)
         }
         .sheet(isPresented: $showingEdit) {
             EditListSheet(list: list)
@@ -71,20 +99,40 @@ struct ListDetailView: View {
             AddMovieToListSheet(list: list)
                 .preferredColorScheme(.dark)
         }
-        .confirmationDialog("Supprimer cette liste ?",
-                            isPresented: $showingDelete,
-                            titleVisibility: .visible) {
-            Button("Supprimer la liste", role: .destructive) {
-                modelContext.delete(list)
-                dismiss()
-            }
-        } message: {
-            Text("« \(list.name) » et ses \(list.items.count) films seront définitivement supprimés.")
-        }
         .onAppear { profilePhoto = ProfilePhotoStore.load() }
     }
     
-    // MARK: - Header
+    // MARK: - Réordonnage natif + persistance
+    
+    private func move(from source: IndexSet, to destination: Int) {
+        var items = sortedItems
+        items.move(fromOffsets: source, toOffset: destination)
+        for (index, entry) in items.enumerated() {
+            entry.position = index
+        }
+    }
+    
+    // MARK: - Header de section "N FILMS / Trier par X"
+    
+    private var sortHeader: some View {
+        HStack {
+            Text("\(list.items.count) FILMS")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.gray)
+            Spacer()
+            Text("Trier par")
+                .font(.caption)
+                .foregroundStyle(.gray)
+            Text(sort.rawValue)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.white)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 8)
+        .textCase(nil)
+    }
+    
+    // MARK: - Header (collage + auteur + actions + description)
     
     private var header: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -147,8 +195,8 @@ struct ListDetailView: View {
                     actionLabel("Trier", icon: "arrow.up.arrow.down")
                 }
                 
-                ListActionButton(title: "Supprimer", icon: "trash", tint: .red) {
-                    showingDelete = true
+                ListActionButton(title: "Cloner", icon: "doc.on.doc") {
+                    cloneList()
                 }
             }
             .padding(.horizontal, 20)
@@ -163,6 +211,7 @@ struct ListDetailView: View {
             }
             .buttonStyle(.plain)
             .padding(.horizontal, 20)
+            .padding(.top, 4)
         }
     }
     
@@ -193,41 +242,26 @@ struct ListDetailView: View {
         }
     }
     
-    // MARK: - Lignes numérotées
+    // MARK: - Clonage
     
-    private var rowsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("\(list.items.count) FILMS")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.gray)
-                Spacer()
-                Text("Trier par")
-                    .font(.caption)
-                    .foregroundStyle(.gray)
-                Text(sort.rawValue)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white)
-            }
-            .padding(.horizontal, 20)
-            
-            if sortedItems.isEmpty {
-                ContentUnavailableView("Liste vide",
-                                       systemImage: "list.bullet.rectangle",
-                                       description: Text("Ajoute des films avec le bouton Ajouter"))
-            } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(sortedItems.enumerated()), id: \.element.persistentModelID) { index, entry in
-                        row(index: index, entry: entry)
-                        if index < sortedItems.count - 1 {
-                            Divider().overlay(.white.opacity(0.08))
-                        }
-                    }
-                }
-                .padding(.horizontal, 20)
-            }
+    private func cloneList() {
+        let copy = ListEntity(name: "\(list.name) (copie)",
+                              listDescription: list.listDescription,
+                              isPublic: list.isPublic)
+        modelContext.insert(copy)
+        
+        for (index, item) in sortedItems.enumerated() {
+            let entry = ListItemEntry(mediaId: item.mediaId,
+                                      mediaType: item.mediaType,
+                                      title: item.title,
+                                      posterPath: item.posterPath,
+                                      position: index)
+            modelContext.insert(entry)
+            copy.items.append(entry)
         }
     }
+    
+    // MARK: - Une ligne
     
     private func row(index: Int, entry: ListItemEntry) -> some View {
         HStack(spacing: 12) {
@@ -237,7 +271,9 @@ struct ListDetailView: View {
                 .frame(width: 36, height: 44)
                 .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
             
-            NavigationLink(value: entry.asMediaItem) {
+            Button {
+                selectedMovie = entry.asMediaItem
+            } label: {
                 HStack(spacing: 12) {
                     AsyncImage(url: entry.posterPath?.tmdbPosterURL()) { phase in
                         if let image = phase.image {
@@ -258,11 +294,10 @@ struct ListDetailView: View {
                             stars(rating)
                         }
                     }
+                    Spacer()
                 }
             }
             .buttonStyle(.plain)
-            
-            Spacer()
             
             Menu {
                 Button(role: .destructive) {
@@ -275,10 +310,11 @@ struct ListDetailView: View {
                     .foregroundStyle(.gray)
             }
             
-            Image(systemName: "line.3.horizontal")
-                .foregroundStyle(.gray)
+            if sort == .manuel {
+                Image(systemName: "line.3.horizontal")
+                    .foregroundStyle(.gray)
+            }
         }
-        .padding(.vertical, 10)
     }
     
     private func stars(_ rating: Int) -> some View {

@@ -11,9 +11,9 @@ import SwiftData
 @Model
 final class ListEntity {
     var name: String
-    var listDescription: String
-    var isPublic: Bool
-    var isLikedByMe: Bool
+    var listDescription: String = ""
+    var isPublic: Bool = true
+    var isLikedByMe: Bool = false
     var dateCreated: Date
     @Relationship(deleteRule: .cascade, inverse: \ListItemEntry.list)
     var items: [ListItemEntry]
@@ -35,6 +35,7 @@ final class ListItemEntry {
     var title: String
     var posterPath: String?
     var dateAdded: Date
+    var position: Int = 0
     var list: ListEntity?
     
     var mediaType: MediaType {
@@ -42,12 +43,13 @@ final class ListItemEntry {
         set { mediaTypeRaw = newValue.rawValue }
     }
     
-    init(mediaId: Int, mediaType: MediaType = .movie, title: String, posterPath: String? = nil, dateAdded: Date = .now) {
+    init(mediaId: Int, mediaType: MediaType = .movie, title: String, posterPath: String? = nil, dateAdded: Date = .now, position: Int = 0) {
         self.mediaId = mediaId
         self.mediaTypeRaw = mediaType.rawValue
         self.title = title
         self.posterPath = posterPath
         self.dateAdded = dateAdded
+        self.position = position
     }
 }
 

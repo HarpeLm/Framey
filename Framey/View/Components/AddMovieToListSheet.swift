@@ -81,7 +81,8 @@ struct AddMovieToListSheet: View {
                 let entry = ListItemEntry(mediaId: movie.id,
                                           mediaType: movie.mediaType,
                                           title: movie.title,
-                                          posterPath: movie.posterPath)
+                                          posterPath: movie.posterPath,
+                                          position: (list.items.map(\.position).max() ?? -1) + 1)
                 modelContext.insert(entry)
                 list.items.append(entry)
             } label: {
