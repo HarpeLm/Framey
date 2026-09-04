@@ -32,7 +32,7 @@ struct HomeTopBar: View {
             .foregroundStyle(.white)
         }
         .padding(.horizontal, 20)
-        .padding(.top, 60)
+        .padding(.top, 8)
     }
 }
 

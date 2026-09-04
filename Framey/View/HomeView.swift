@@ -26,7 +26,7 @@ struct HomeView: View {
                 VStack(spacing: 0) {
                     HomeTopBar()
                     HomeSegmentBar(selectedTab: $selectedTab)
-                        .padding(.top, 16)
+                        .padding(.top, 12)
                     
                     ScrollView {
                         VStack(alignment: .leading, spacing: 28) {
@@ -68,11 +68,12 @@ struct HomeView: View {
                                 comingSoon(tab: selectedTab)
                             }
                         }
-                        .padding(.top, 20)
+                        .padding(.top, 16)
                         .padding(.bottom, 40)
                     }
                 }
             }
+            .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: MediaItemEntity.self) { item in
                 MovieDetailView(item: item)
             }
