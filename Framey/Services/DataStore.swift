@@ -4,6 +4,7 @@
 //
 //  Created by Fabian Dargaud on 03/09/2026.
 //
+
 import Foundation
 import SwiftData
 
@@ -30,5 +31,12 @@ final class MediaItemEntity {
         self.posterPath = posterPath
         self.backdropPath = backdropPath
         self.overview = overview
+    }
+}
+
+extension MediaItemEntity {
+    var isReleasedThisWeek: Bool {
+        guard let date = releaseDate else { return false }
+        return Calendar.current.isDate(date, equalTo: .now, toGranularity: .weekOfYear)
     }
 }

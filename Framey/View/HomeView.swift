@@ -4,7 +4,6 @@ import SwiftData
 struct HomeView: View {
     @State private var viewModel = HomeViewModel()
     @State private var selectedTab: HomeTab = .accueil
-    @State private var selectedDay = Date.now
     @Query(sort: \WatchlistEntry.dateAdded, order: .reverse) private var watchlist: [WatchlistEntry]
     @Query(sort: \WatchedEntry.dateWatched, order: .reverse) private var watched: [WatchedEntry]
     @Query(sort: \ListEntity.dateCreated) private var lists: [ListEntity]
@@ -15,10 +14,6 @@ struct HomeView: View {
     
     private var featured: [MediaItemEntity] {
         viewModel.featuredMovies(excludingWatchedIds: watchedIds)
-    }
-    
-    private var dayReleases: [MediaItemEntity] {
-        viewModel.releases(on: selectedDay)
     }
     
     var body: some View {
@@ -35,6 +30,10 @@ struct HomeView: View {
                     VStack(alignment: .leading, spacing: 28) {
                         if selectedTab == .accueil {
                             FeaturedHero(movies: featured, isLoading: viewModel.isLoading)
+                            
+                            if !viewModel.nowPlaying.isEmpty {
+                                cinemaSection
+                            }
                             
                             if !watchlist.isEmpty {
                                 MediaRow(title: "À voir ensuite", items: watchlist) { entry in
@@ -58,10 +57,6 @@ struct HomeView: View {
                                 }
                             }
                             
-                            if !viewModel.weekReleases.isEmpty {
-                                cinemaSection
-                            }
-                            
                             if !lists.isEmpty {
                                 listsRow
                             }
@@ -77,34 +72,31 @@ struct HomeView: View {
         .task { await viewModel.load() }
     }
     
-    // MARK: - Au cinéma cette semaine
+    // MARK: - Actuellement au cinéma
     
     private var cinemaSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Au cinéma cette semaine")
-                .font(.headline)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 20)
+            HStack {
+                Text("Actuellement au cinéma")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                Spacer()
+                Button("Voir tout") { }
+                    .font(.caption)
+                    .foregroundStyle(.purple)
+            }
+            .padding(.horizontal, 20)
             
-            WeekStrip(days: viewModel.weekDays,
-                      selectedDay: $selectedDay,
-                      hasReleases: viewModel.hasReleases)
-            
-            if dayReleases.isEmpty {
-                Text("Aucune sortie ce jour 🎬")
-                    .font(.subheadline)
-                    .foregroundStyle(.gray)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 24)
-            } else {
-                MediaRow(title: "Sorties du jour", items: dayReleases) { movie in
-                    AnyView(
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(viewModel.nowPlaying, id: \.id) { movie in
                         NavigationLink(value: movie) {
-                            MediaPosterCard(title: movie.title, posterPath: movie.posterPath)
+                            CinemaPosterCard(movie: movie)
                         }
                         .buttonStyle(.plain)
-                    )
+                    }
                 }
+                .padding(.horizontal, 20)
             }
         }
     }

@@ -28,16 +28,16 @@ enum MovieService {
         return try await fetchMovies(urlString: urlString)
     }
 
-    static func fetchWeekReleases(region: String) async throws -> [MediaItemEntity] {
-        async let nowPlaying = fetchMovies(urlString: releaseURL("now_playing", region: region))
-        async let upcoming = fetchMovies(urlString: releaseURL("upcoming", region: region))
-        let (n, u) = try await (nowPlaying, upcoming)
+    static func fetchNowPlaying(region: String) async throws -> [MediaItemEntity] {
+        async let page1 = fetchMovies(urlString: nowPlayingURL(page: 1, region: region))
+        async let page2 = fetchMovies(urlString: nowPlayingURL(page: 2, region: region))
+        let (p1, p2) = try await (page1, page2)
         var seen = Set<Int>()
-        return (n + u).filter { seen.insert($0.id).inserted }
+        return (p1 + p2).filter { seen.insert($0.id).inserted }
     }
 
-    private static func releaseURL(_ endpoint: String, region: String) -> String {
-        "https://api.themoviedb.org/3/movie/\(endpoint)?api_key=\(Secrets.tmdbApiKey)&language=fr-FR&region=\(region)"
+    private static func nowPlayingURL(page: Int, region: String) -> String {
+        "https://api.themoviedb.org/3/movie/now_playing?api_key=\(Secrets.tmdbApiKey)&language=fr-FR&region=\(region)&page=\(page)"
     }
 
     private static func fetchMovies(urlString: String) async throws -> [MediaItemEntity] {
