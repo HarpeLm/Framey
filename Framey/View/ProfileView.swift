@@ -13,6 +13,7 @@ struct ProfileView: View {
     @AppStorage("handle") private var handle = "@framey"
     @State private var selectedTab: ProfileTab = .activite
     @State private var showingEditSheet = false
+    @State private var profilePhoto: Data?
     @Query(sort: \WatchedEntry.dateWatched, order: .reverse) private var watched: [WatchedEntry]
     @Query(sort: \WatchlistEntry.dateAdded, order: .reverse) private var watchlist: [WatchlistEntry]
     @Query(sort: \ListEntity.dateCreated) private var lists: [ListEntity]
@@ -21,7 +22,7 @@ struct ProfileView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    ProfileHeader(username: username, handle: handle)
+                    ProfileHeader(username: username, handle: handle, photoData: profilePhoto)
                     statsGrid
                     
                     if !favoriteMovies.isEmpty {
@@ -50,9 +51,14 @@ struct ProfileView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingEditSheet) {
+            .sheet(isPresented: $showingEditSheet, onDismiss: {
+                profilePhoto = ProfilePhotoStore.load()
+            }) {
                 ProfileEditSheet(username: $username, handle: $handle)
                     .preferredColorScheme(.dark)
+            }
+            .onAppear {
+                profilePhoto = ProfilePhotoStore.load()
             }
             .navigationDestination(for: MediaItemEntity.self) { item in
                 MovieDetailView(item: item)

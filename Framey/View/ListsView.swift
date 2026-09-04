@@ -10,6 +10,9 @@ import SwiftData
 
 struct ListsView: View {
     @Query(sort: \ListEntity.dateCreated) private var lists: [ListEntity]
+    @Environment(\.modelContext) private var modelContext
+    @State private var showingNewList = false
+    @State private var newListName = ""
     
     var body: some View {
         Group {
@@ -34,6 +37,25 @@ struct ListsView: View {
         .background(Color.black.ignoresSafeArea())
         .navigationTitle("Tes listes")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showingNewList = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+            }
+        }
+        .alert("Nouvelle liste", isPresented: $showingNewList) {
+            TextField("Nom de la liste", text: $newListName)
+            Button("Créer") {
+                let name = newListName.trimmingCharacters(in: .whitespaces)
+                guard !name.isEmpty else { return }
+                modelContext.insert(ListEntity(name: name))
+                newListName = ""
+            }
+            Button("Annuler", role: .cancel) { }
+        }
     }
     
     private func listCard(_ list: ListEntity) -> some View {
@@ -72,3 +94,4 @@ struct ListsView: View {
     }
     .modelContainer(for: [ListEntity.self, ListItemEntry.self], inMemory: true)
 }
+
