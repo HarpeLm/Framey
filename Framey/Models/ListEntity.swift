@@ -11,18 +11,14 @@ import SwiftData
 @Model
 final class ListEntity {
     var name: String
-    var listDescription: String
-    var isPublic: Bool
     var dateCreated: Date
-    
     @Relationship(deleteRule: .cascade, inverse: \ListItemEntry.list)
-    var items: [ListItemEntry] = []
+    var items: [ListItemEntry]
     
-    init(name: String, listDescription: String = "", isPublic: Bool = false, dateCreated: Date = .now) {
+    init(name: String, dateCreated: Date = .now, items: [ListItemEntry] = []) {
         self.name = name
-        self.listDescription = listDescription
-        self.isPublic = isPublic
         self.dateCreated = dateCreated
+        self.items = items
     }
 }
 
@@ -46,5 +42,11 @@ final class ListItemEntry {
         self.title = title
         self.posterPath = posterPath
         self.dateAdded = dateAdded
+    }
+}
+
+extension ListItemEntry {
+    var asMediaItem: MediaItemEntity {
+        MediaItemEntity(id: mediaId, mediaType: mediaType, title: title, posterPath: posterPath)
     }
 }

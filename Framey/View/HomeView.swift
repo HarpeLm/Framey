@@ -82,11 +82,14 @@ struct HomeView: View {
                 case .nowPlaying: NowPlayingView()
                 case .diary: DiaryView()
                 case .search: SearchView()
+                case .lists: ListsView()
+                case .list(let list): ListDetailView(list: list)
                 }
             }
         }
         .task { await viewModel.load() }
     }
+
     
     // MARK: - Actuellement au cinéma
     
@@ -126,30 +129,38 @@ struct HomeView: View {
                     .font(.headline)
                     .foregroundStyle(.white)
                 Spacer()
+                Button("Voir tout") { path.append(HomeRoute.lists) }
+                    .font(.caption)
+                    .foregroundStyle(.purple)
             }
             .padding(.horizontal, 20)
             
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
                     ForEach(lists) { list in
-                        VStack(alignment: .leading, spacing: 4) {
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(.purple.opacity(0.2))
-                                .frame(width: 140, height: 90)
-                                .overlay(
-                                    Image(systemName: "list.bullet.rectangle")
-                                        .font(.title2)
-                                        .foregroundStyle(.purple)
-                                )
-                            Text(list.name)
-                                .font(.caption)
-                                .foregroundStyle(.white)
-                                .lineLimit(1)
-                            Text("\(list.items.count) titres")
-                                .font(.caption2)
-                                .foregroundStyle(.gray)
+                        Button {
+                            path.append(HomeRoute.list(list))
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(.purple.opacity(0.2))
+                                    .frame(width: 140, height: 90)
+                                    .overlay(
+                                        Image(systemName: "list.bullet.rectangle")
+                                            .font(.title2)
+                                            .foregroundStyle(.purple)
+                                    )
+                                Text(list.name)
+                                    .font(.caption)
+                                    .foregroundStyle(.white)
+                                    .lineLimit(1)
+                                Text("\(list.items.count) titres")
+                                    .font(.caption2)
+                                    .foregroundStyle(.gray)
+                            }
+                            .frame(width: 140)
                         }
-                        .frame(width: 140)
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.horizontal, 20)

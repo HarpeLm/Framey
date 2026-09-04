@@ -11,4 +11,6 @@ enum HomeRoute: Hashable {
     case nowPlaying
     case diary
     case search
+    case lists
+    case list(ListEntity)
 }
