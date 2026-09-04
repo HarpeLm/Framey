@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct HomeTopBar: View {
+    var onSearch: () -> Void = { }
+    
     var body: some View {
         HStack {
             Image("Framey Logo")
@@ -18,7 +20,7 @@ struct HomeTopBar: View {
             Spacer()
             
             HStack(spacing: 20) {
-                Button { } label: {
+                Button(action: onSearch) {
                     Image(systemName: "magnifyingglass")
                 }
                 Button { } label: {

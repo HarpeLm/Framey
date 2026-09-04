@@ -24,7 +24,7 @@ struct HomeView: View {
                     .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
-                    HomeTopBar()
+                    HomeTopBar(onSearch: { path.append(.search) })
                     HomeSegmentBar(selectedTab: $selectedTab)
                         .padding(.top, 12)
                     
@@ -81,6 +81,7 @@ struct HomeView: View {
                 switch route {
                 case .nowPlaying: NowPlayingView()
                 case .diary: DiaryView()
+                case .search: SearchView()
                 }
             }
         }

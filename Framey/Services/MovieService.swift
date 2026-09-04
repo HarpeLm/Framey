@@ -40,6 +40,14 @@ enum MovieService {
         "https://api.themoviedb.org/3/movie/now_playing?api_key=\(Secrets.tmdbApiKey)&language=fr-FR&region=\(region)&page=\(page)"
     }
 
+    static func searchMovies(query: String) async throws -> [MediaItemEntity] {
+        guard let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+            throw NetworkError.invalidURL
+        }
+        let urlString = "https://api.themoviedb.org/3/search/movie?api_key=\(Secrets.tmdbApiKey)&language=fr-FR&query=\(encoded)"
+        return try await fetchMovies(urlString: urlString)
+    }
+
     private static func fetchMovies(urlString: String) async throws -> [MediaItemEntity] {
         guard let url = URL(string: urlString) else {
             throw NetworkError.invalidURL

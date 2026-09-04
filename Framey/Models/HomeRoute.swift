@@ -10,4 +10,5 @@ import Foundation
 enum HomeRoute: Hashable {
     case nowPlaying
     case diary
+    case search
 }
