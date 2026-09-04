@@ -36,32 +36,35 @@ struct FeaturedHeroCard: View {
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.85))
                     .lineLimit(3)
-                
-                Label("Voir la fiche", systemImage: "play.fill")
-                    .font(.subheadline.weight(.semibold))
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(.white.opacity(0.2), in: Capsule())
-                    .foregroundStyle(.white)
-                    .padding(.top, 4)
             }
             .padding(16)
         }
         .overlay(alignment: .topLeading) {
-            Text("À l'affiche")
-                .font(.caption.bold())
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(Color.purple, in: Capsule())
-                .foregroundStyle(.white)
-                .padding(16)
+            HStack {
+                Text("À l'affiche")
+                    .font(.caption.bold())
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Color.purple, in: Capsule())
+                    .foregroundStyle(.white)
+                
+                Spacer()
+                
+                Label("Voir la fiche", systemImage: "play.fill")
+                    .font(.caption.weight(.semibold))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
+                    .background(.white.opacity(0.2), in: Capsule())
+                    .foregroundStyle(.white)
+            }
+            .padding(16)
         }
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 }
 
 #Preview {
-    FeaturedHeroCard(movie: MediaItemEntity(id: 157336, title: "Interstellar", overview: "Un voyage au-delà des étoiles."))
+    FeaturedHeroCard(movie: MediaItemEntity(id: 157336, title: "Interstellar", overview: "Un voyage au-delà des étoiles pour sauver l'humanité."))
         .frame(height: 240)
         .padding()
         .preferredColorScheme(.dark)
