@@ -5,6 +5,10 @@ struct HomeView: View {
     @State private var viewModel = HomeViewModel()
     @State private var selectedTab: HomeTab = .accueil
     @State private var path = NavigationPath()
+    @State private var listOptionsTarget: ListEntity?
+    @Environment(\.modelContext) private var modelContext
+    @State private var showingNewList = false
+    @State private var newListName = ""
     @Query(sort: \WatchlistEntry.dateAdded, order: .reverse) private var watchlist: [WatchlistEntry]
     @Query(sort: \WatchedEntry.dateWatched, order: .reverse) private var watched: [WatchedEntry]
     @Query(sort: \ListEntity.dateCreated) private var lists: [ListEntity]
@@ -61,9 +65,8 @@ struct HomeView: View {
                                     }
                                 }
                                 
-                                if !lists.isEmpty {
-                                    listsRow
-                                }
+                                // Toujours afficher la rangée listes (même vide) pour avoir la carte "Nouvelle liste"
+                                listsRow
                             } else {
                                 comingSoon(tab: selectedTab)
                             }
@@ -86,10 +89,23 @@ struct HomeView: View {
                 case .list(let list): ListDetailView(list: list)
                 }
             }
+            .sheet(item: $listOptionsTarget) { list in
+                ListOptionsSheet(list: list)
+                    .preferredColorScheme(.dark)
+            }
+            .alert("Nouvelle liste", isPresented: $showingNewList) {
+                TextField("Nom de la liste", text: $newListName)
+                Button("Créer") {
+                    let name = newListName.trimmingCharacters(in: .whitespaces)
+                    guard !name.isEmpty else { return }
+                    modelContext.insert(ListEntity(name: name))
+                    newListName = ""
+                }
+                Button("Annuler", role: .cancel) { }
+            }
         }
         .task { await viewModel.load() }
     }
-
     
     // MARK: - Actuellement au cinéma
     
@@ -137,31 +153,54 @@ struct HomeView: View {
             
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
+                    // ✅ Cartes des listes existantes
                     ForEach(lists) { list in
-                        Button {
-                            path.append(HomeRoute.list(list))
-                        } label: {
-                            VStack(alignment: .leading, spacing: 4) {
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(.purple.opacity(0.2))
-                                    .frame(width: 140, height: 90)
-                                    .overlay(
-                                        Image(systemName: "list.bullet.rectangle")
-                                            .font(.title2)
-                                            .foregroundStyle(.purple)
-                                    )
-                                Text(list.name)
-                                    .font(.caption)
-                                    .foregroundStyle(.white)
-                                    .lineLimit(1)
-                                Text("\(list.items.count) titres")
-                                    .font(.caption2)
-                                    .foregroundStyle(.gray)
-                            }
-                            .frame(width: 140)
+                        VStack(alignment: .leading, spacing: 4) {
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(.purple.opacity(0.2))
+                                .frame(width: 140, height: 90)
+                                .overlay(
+                                    Image(systemName: "list.bullet.rectangle")
+                                        .font(.title2)
+                                        .foregroundStyle(.purple)
+                                )
+                            Text(list.name)
+                                .font(.caption)
+                                .foregroundStyle(.white)
+                                .lineLimit(1)
+                            Text("\(list.items.count) titres")
+                                .font(.caption2)
+                                .foregroundStyle(.gray)
                         }
-                        .buttonStyle(.plain)
+                        .frame(width: 140)
+                        .onTapGesture { path.append(HomeRoute.list(list)) }
+                        .onLongPressGesture { listOptionsTarget = list }
                     }
+                    
+                    // ✅ Carte "Nouvelle liste" APRÈS le ForEach (dernière carte de la rangée)
+                    Button {
+                        showingNewList = true
+                    } label: {
+                        VStack(alignment: .leading, spacing: 4) {
+                            RoundedRectangle(cornerRadius: 12)
+                                .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6]))
+                                .foregroundStyle(.purple.opacity(0.6))
+                                .frame(width: 140, height: 90)
+                                .overlay(
+                                    Image(systemName: "plus")
+                                        .font(.title2)
+                                        .foregroundStyle(.purple)
+                                )
+                            Text("Nouvelle liste")
+                                .font(.caption)
+                                .foregroundStyle(.purple)
+                            Text("Créer")
+                                .font(.caption2)
+                                .foregroundStyle(.gray)
+                        }
+                        .frame(width: 140)
+                    }
+                    .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 20)
             }

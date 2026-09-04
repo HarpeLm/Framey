@@ -10,90 +10,94 @@ import SwiftData
 
 struct AddToListSheet: View {
     let item: MediaItemEntity
-    
-    @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
     @Query(sort: \ListEntity.dateCreated) private var lists: [ListEntity]
-    
+    @Environment(\.modelContext) private var modelContext
     @State private var showingNewList = false
     @State private var newListName = ""
     
     var body: some View {
         NavigationStack {
-            Group {
-                if lists.isEmpty {
-                    ContentUnavailableView("Aucune liste",
-                                           systemImage: "list.bullet.rectangle",
-                                           description: Text("Crée ta première liste avec le bouton +"))
-                } else {
-                    listRows
-                }
-            }
-            .navigationTitle("Ajouter à une liste")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Fermer") { dismiss() }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { showingNewList = true } label: {
-                        Image(systemName: "plus")
+            List {
+                Section("Ajouter à une liste") {
+                    ForEach(lists) { list in
+                        let isInList = list.items.contains { $0.mediaId == item.id }
+                        
+                        Button {
+                            toggle(list)
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "list.bullet.rectangle")
+                                    .foregroundStyle(.purple)
+                                
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(list.name)
+                                        .foregroundStyle(.white)
+                                    Text("\(list.items.count) titres")
+                                        .font(.caption2)
+                                        .foregroundStyle(.gray)
+                                }
+                                
+                                Spacer()
+                                
+                                Image(systemName: isInList ? "checkmark.circle.fill" : "plus.circle")
+                                    .font(.title3)
+                                    .foregroundStyle(isInList ? .green : .gray)
+                            }
+                        }
+                        .listRowBackground(Color.white.opacity(0.04))
                     }
                 }
+                
+                Button {
+                    showingNewList = true
+                } label: {
+                    Label("Nouvelle liste", systemImage: "plus")
+                }
+                .listRowBackground(Color.white.opacity(0.04))
             }
+            .scrollContentBackground(.hidden)
+            .background(Color.black)
+            .navigationTitle("Listes")
+            .navigationBarTitleDisplayMode(.inline)
             .alert("Nouvelle liste", isPresented: $showingNewList) {
                 TextField("Nom de la liste", text: $newListName)
-                Button("Créer") { createList() }
-                Button("Annuler", role: .cancel) { newListName = "" }
+                Button("Créer et ajouter") {
+                    let name = newListName.trimmingCharacters(in: .whitespaces)
+                    guard !name.isEmpty else { return }
+                    let newList = ListEntity(name: name)
+                    modelContext.insert(newList)
+                    add(to: newList)
+                    newListName = ""
+                }
+                Button("Annuler", role: .cancel) { }
             }
         }
         .presentationDetents([.medium, .large])
     }
     
-    private var listRows: some View {
-        List(lists) { list in
-            Button {
-                toggle(list)
-            } label: {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(list.name).foregroundStyle(.primary)
-                        Text("\(list.items.count) titres")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    if contains(list) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                    }
-                }
-            }
-            .buttonStyle(.plain)
-        }
-    }
-    
-    private func contains(_ list: ListEntity) -> Bool {
-        list.items.contains { $0.mediaId == item.id && $0.mediaTypeRaw == item.mediaTypeRaw }
-    }
+    // MARK: - Ajout / retrait
     
     private func toggle(_ list: ListEntity) {
-        if let existing = list.items.first(where: { $0.mediaId == item.id && $0.mediaTypeRaw == item.mediaTypeRaw }) {
+        if let existing = list.items.first(where: { $0.mediaId == item.id }) {
             modelContext.delete(existing)
         } else {
-            let entry = ListItemEntry(mediaId: item.id,
-                                      mediaType: item.mediaType,
-                                      title: item.title,
-                                      posterPath: item.posterPath)
-            entry.list = list
-            modelContext.insert(entry)
+            add(to: list)
         }
     }
     
-    private func createList() {
-        let name = newListName.trimmingCharacters(in: .whitespaces)
-        guard !name.isEmpty else { return }
-        modelContext.insert(ListEntity(name: name))
-        newListName = ""
+    private func add(to list: ListEntity) {
+        let entry = ListItemEntry(mediaId: item.id,
+                                  mediaType: item.mediaType,
+                                  title: item.title,
+                                  posterPath: item.posterPath,
+                                  position: (list.items.map(\.position).max() ?? -1) + 1)
+        modelContext.insert(entry)
+        list.items.append(entry)
     }
+}
+
+#Preview {
+    AddToListSheet(item: MediaItemEntity(id: 157336, title: "Interstellar"))
+        .preferredColorScheme(.dark)
+        .modelContainer(for: [ListEntity.self, ListItemEntry.self], inMemory: true)
 }

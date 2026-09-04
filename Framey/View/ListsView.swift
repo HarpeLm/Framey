@@ -13,6 +13,7 @@ struct ListsView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var showingNewList = false
     @State private var newListName = ""
+    @State private var selectedList: ListEntity?
     
     var body: some View {
         Group {
@@ -21,22 +22,33 @@ struct ListsView: View {
                                        systemImage: "list.bullet.rectangle",
                                        description: Text("Crée des listes depuis la fiche d'un film"))
             } else {
-                ScrollView {
-                    VStack(spacing: 12) {
-                        ForEach(lists) { list in
-                            NavigationLink(value: HomeRoute.list(list)) {
-                                listCard(list)
-                            }
-                            .buttonStyle(.plain)
+                List {
+                    ForEach(lists) { list in
+                        Button {
+                            selectedList = list
+                        } label: {
+                            listCard(list)
+                        }
+                        .buttonStyle(.plain)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                    }
+                    .onDelete { indexSet in
+                        for index in indexSet {
+                            modelContext.delete(lists[index])
                         }
                     }
-                    .padding(20)
                 }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
             }
         }
         .background(Color.black.ignoresSafeArea())
         .navigationTitle("Tes listes")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(item: $selectedList) { list in
+            ListDetailView(list: list)
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -82,8 +94,7 @@ struct ListsView: View {
                 .font(.caption)
                 .foregroundStyle(.gray)
         }
-        .padding(12)
-        .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
+        .padding(.vertical, 4)
     }
 }
 
@@ -94,4 +105,3 @@ struct ListsView: View {
     }
     .modelContainer(for: [ListEntity.self, ListItemEntry.self], inMemory: true)
 }
-

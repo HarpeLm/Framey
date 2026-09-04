@@ -77,6 +77,11 @@ struct ListDetailView: View {
                             .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
                     }
                     .onMove(perform: move)
+                    .onDelete { indexSet in
+                        for index in indexSet {
+                            modelContext.delete(sortedItems[index])
+                        }
+                    }
                     .moveDisabled(sort != .manuel)
                 }
             } header: {
