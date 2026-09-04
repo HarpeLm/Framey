@@ -9,7 +9,10 @@ import SwiftUI
 import SwiftData
 
 struct ProfileView: View {
+    @AppStorage("username") private var username = "Cinéphile"
+    @AppStorage("handle") private var handle = "@framey"
     @State private var selectedTab: ProfileTab = .activite
+    @State private var showingEditSheet = false
     @Query(sort: \WatchedEntry.dateWatched, order: .reverse) private var watched: [WatchedEntry]
     @Query(sort: \WatchlistEntry.dateAdded, order: .reverse) private var watchlist: [WatchlistEntry]
     @Query(sort: \ListEntity.dateCreated) private var lists: [ListEntity]
@@ -18,8 +21,13 @@ struct ProfileView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    ProfileHeader(username: "Cinéphile", handle: "@framey")
+                    ProfileHeader(username: username, handle: handle)
                     statsGrid
+                    
+                    if !favoriteMovies.isEmpty {
+                        favoritesCarousel
+                    }
+                    
                     ProfileSegmentBar(selectedTab: $selectedTab)
                     tabContent
                 }
@@ -28,6 +36,24 @@ struct ProfileView: View {
             .background(Color.black.ignoresSafeArea())
             .navigationTitle("Profil")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button {
+                            showingEditSheet = true
+                        } label: {
+                            Label("Modifier le profil", systemImage: "pencil")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .foregroundStyle(.white)
+                    }
+                }
+            }
+            .sheet(isPresented: $showingEditSheet) {
+                ProfileEditSheet(username: $username, handle: $handle)
+                    .preferredColorScheme(.dark)
+            }
             .navigationDestination(for: MediaItemEntity.self) { item in
                 MovieDetailView(item: item)
             }
@@ -39,16 +65,12 @@ struct ProfileView: View {
         }
     }
     
-    // MARK: - Stats (gardées de l'ancienne version)
+    // MARK: - Stats (allégées)
     
     private var statsGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
             StatCard(value: "\(watched.count)", label: "Films vus", icon: "eye.fill")
             StatCard(value: "\(watchedThisMonth)", label: "Vus ce mois-ci", icon: "popcorn")
-            StatCard(value: "\(watchedThisYear)", label: "Vus en \(currentYear)", icon: "calendar")
-            StatCard(value: "\(watchlist.count)", label: "À voir", icon: "bookmark")
-            StatCard(value: "\(lists.count)", label: "Listes", icon: "list.bullet.rectangle")
-            StatCard(value: "\(averageRating)", label: "Note moyenne /5", icon: "star.fill")
         }
         .padding(.horizontal, 20)
     }
@@ -59,21 +81,38 @@ struct ProfileView: View {
         }.count
     }
     
-    private var watchedThisYear: Int {
-        watched.filter {
-            Calendar.current.isDate($0.dateWatched, equalTo: .now, toGranularity: .year)
-        }.count
+    // MARK: - Favoris (top 5 notes)
+    
+    private var favoriteMovies: [WatchedEntry] {
+        Array(
+            watched
+                .filter { $0.rating != nil }
+                .sorted { ($0.rating ?? 0) > ($1.rating ?? 0) }
+                .prefix(5)
+        )
     }
     
-    private var currentYear: Int {
-        Calendar.current.component(.year, from: .now)
-    }
-    
-    private var averageRating: String {
-        let rated = watched.compactMap(\.rating)
-        guard !rated.isEmpty else { return "–" }
-        let avg = Double(rated.reduce(0, +)) / Double(rated.count)
-        return avg.formatted(.number.precision(.fractionLength(1)))
+    private var favoritesCarousel: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Mes favoris")
+                .font(.headline)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 20)
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(favoriteMovies) { entry in
+                        NavigationLink(value: entry.asMediaItem) {
+                            MediaPosterCard(title: entry.title,
+                                            posterPath: entry.posterPath,
+                                            rating: entry.rating)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+        }
     }
     
     // MARK: - Onglets
@@ -167,7 +206,7 @@ struct ProfileView: View {
         .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
     }
     
-    // MARK: - Feed d'activité (fusion watched + watchlist, trié par date)
+    // MARK: - Feed d'activité
     
     private var activityItems: [ActivityItem] {
         let watchedItems = watched.map { entry in
