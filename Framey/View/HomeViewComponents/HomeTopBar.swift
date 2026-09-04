@@ -26,9 +26,6 @@ struct HomeTopBar: View {
                 Button { } label: {
                     Image(systemName: "bell")
                 }
-                Button { } label: {
-                    Image(systemName: "person.crop.circle")
-                }
             }
             .font(.title3)
             .foregroundStyle(.white)

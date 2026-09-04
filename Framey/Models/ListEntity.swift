@@ -11,12 +11,18 @@ import SwiftData
 @Model
 final class ListEntity {
     var name: String
+    var listDescription: String
+    var isPublic: Bool
+    var isLikedByMe: Bool
     var dateCreated: Date
     @Relationship(deleteRule: .cascade, inverse: \ListItemEntry.list)
     var items: [ListItemEntry]
     
-    init(name: String, dateCreated: Date = .now, items: [ListItemEntry] = []) {
+    init(name: String, listDescription: String = "", isPublic: Bool = true, dateCreated: Date = .now, items: [ListItemEntry] = []) {
         self.name = name
+        self.listDescription = listDescription
+        self.isPublic = isPublic
+        self.isLikedByMe = false
         self.dateCreated = dateCreated
         self.items = items
     }
