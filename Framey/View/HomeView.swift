@@ -4,7 +4,7 @@ import SwiftData
 struct HomeView: View {
     @State private var viewModel = HomeViewModel()
     @State private var selectedTab: HomeTab = .accueil
-    @State private var path: [HomeRoute] = []
+    @State private var path = NavigationPath()
     @Query(sort: \WatchlistEntry.dateAdded, order: .reverse) private var watchlist: [WatchlistEntry]
     @Query(sort: \WatchedEntry.dateWatched, order: .reverse) private var watched: [WatchedEntry]
     @Query(sort: \ListEntity.dateCreated) private var lists: [ListEntity]
@@ -24,7 +24,7 @@ struct HomeView: View {
                     .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
-                    HomeTopBar(onSearch: { path.append(.search) })
+                    HomeTopBar(onSearch: { path.append(HomeRoute.search) })
                     HomeSegmentBar(selectedTab: $selectedTab)
                         .padding(.top, 12)
                     
@@ -51,7 +51,7 @@ struct HomeView: View {
                                 if !watched.isEmpty {
                                     MediaRow(title: "Vus récemment",
                                              items: watched,
-                                             onSeeAll: { path.append(.diary) }) { entry in
+                                             onSeeAll: { path.append(HomeRoute.diary) }) { entry in
                                         AnyView(
                                             NavigationLink(value: entry.asMediaItem) {
                                                 MediaPosterCard(title: entry.title, posterPath: entry.posterPath, rating: entry.rating)
@@ -97,7 +97,7 @@ struct HomeView: View {
                     .font(.headline)
                     .foregroundStyle(.white)
                 Spacer()
-                Button("Voir tout") { path.append(.nowPlaying) }
+                Button("Voir tout") { path.append(HomeRoute.nowPlaying) }
                     .font(.caption)
                     .foregroundStyle(.purple)
             }
