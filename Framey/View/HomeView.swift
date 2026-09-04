@@ -6,51 +6,65 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct HomeView: View {
+    @State private var viewModel = HomeViewModel()
+    @State private var selectedTab: HomeTab = .accueil
+    @Query private var watchedEntries: [WatchedEntry]
+    
+    private var watchedIds: Set<Int> {
+        Set(watchedEntries.map(\.mediaId))
+    }
+    
+    private var featured: [MediaItemEntity] {
+        viewModel.featuredMovies(excludingWatchedIds: watchedIds)
+    }
+    
     var body: some View {
         ZStack(alignment: .topLeading) {
             Color.black
                 .ignoresSafeArea()
             
-            VStack {
-                topBar
-                Spacer()
+            VStack(spacing: 0) {
+                HomeTopBar()
+                HomeSegmentBar(selectedTab: $selectedTab)
+                    .padding(.top, 16)
+                
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        if selectedTab == .accueil {
+                            FeaturedHero(movies: featured, isLoading: viewModel.isLoading)
+                        } else {
+                            comingSoon(tab: selectedTab)
+                        }
+                    }
+                    .padding(.top, 20)
+                }
             }
         }
+        .task { await viewModel.load() }
     }
     
-    // MARK: - Barre du haut
-    
-    private var topBar: some View {
-        HStack {
-            Image("Framey Logo")
-                .resizable()
-                .scaledToFit()
-                .frame(height: 40)
-            
-            Spacer()
-            
-            HStack(spacing: 20) {
-                Button { } label: {
-                    Image(systemName: "magnifyingglass")
-                }
-                Button { } label: {
-                    Image(systemName: "bell")
-                }
-                Button { } label: {
-                    Image(systemName: "person.crop.circle")
-                }
-            }
-            .font(.title3)
-            .foregroundStyle(.white)
+    private func comingSoon(tab: HomeTab) -> some View {
+        VStack(spacing: 12) {
+            Image(systemName: "sparkles")
+                .font(.largeTitle)
+                .foregroundStyle(.purple)
+            Text("\(tab.title) — bientôt disponible")
+                .font(.headline)
+                .foregroundStyle(.white)
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 60)
+        .frame(maxWidth: .infinity)
+        .padding(.top, 80)
     }
 }
 
 #Preview {
-    HomeView()
-        .preferredColorScheme(.dark)
+    NavigationStack {
+        HomeView()
+            .preferredColorScheme(.dark)
+            .navigationDestination(for: MediaItemEntity.self) { MovieDetailView(item: $0) }
+    }
+    .modelContainer(for: [MediaItemEntity.self, WatchedEntry.self, WatchlistEntry.self, ListEntity.self, ListItemEntry.self, LikeEntry.self, ReviewEntry.self], inMemory: true)
 }
