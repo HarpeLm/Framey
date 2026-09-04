@@ -10,7 +10,7 @@ import SwiftData
 
 @Model
 final class WatchedEntry {
-    #Unique<WatchedEntry>([\.mediaId, \.mediaTypeRaw])
+    // ⚠️ PLUS de #Unique : un même film peut avoir PLUSIEURS visionnages (rewatch)
     
     var mediaId: Int
     var mediaTypeRaw: String
@@ -24,7 +24,7 @@ final class WatchedEntry {
         set { mediaTypeRaw = newValue.rawValue }
     }
     
-    init(mediaId: Int, mediaType: MediaType = .movie, title: String, posterPath: String? = nil, dateWatched: Date = .now, rating: Int? = nil) {
+    init(mediaId: Int, mediaType: MediaType = .movie, title: String = "", posterPath: String? = nil, dateWatched: Date = .now, rating: Int? = nil) {
         self.mediaId = mediaId
         self.mediaTypeRaw = mediaType.rawValue
         self.title = title
