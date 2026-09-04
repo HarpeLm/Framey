@@ -31,3 +31,9 @@ final class WatchlistEntry {
         self.dateAdded = dateAdded
     }
 }
+
+extension WatchlistEntry {
+    var asMediaItem: MediaItemEntity {
+        MediaItemEntity(id: mediaId, mediaType: mediaType, title: title, posterPath: posterPath)
+    }
+}
