@@ -17,6 +17,7 @@ struct EpisodeNotesGridView: View {
     @State private var episodeToRate: TVEpisode?
     @State private var ratingSeasonNumber = 1
     @Query private var episodeWatches: [EpisodeWatchEntry]
+    @Environment(\.dismiss) private var dismiss
     
     init(item: MediaItemEntity, seasonCount: Int) {
         self.item = item
@@ -29,9 +30,7 @@ struct EpisodeNotesGridView: View {
     
     var body: some View {
         NavigationStack {
-            // Horizontal extérieur : les colonnes (saisons) défilent ensemble, librement
             ScrollView(.horizontal, showsIndicators: false) {
-                // Vertical intérieur : défilement "lourd" qui s'aimante aux lignes
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 3) {
                         headerRow
@@ -47,6 +46,19 @@ struct EpisodeNotesGridView: View {
             .background(Color.black.ignoresSafeArea())
             .navigationTitle("Mes notes d'épisodes")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(8)
+                            .background(.white.opacity(0.1), in: Circle())
+                    }
+                }
+            }
             .task { await loadSeasons() }
             .sheet(item: $episodeToRate) { episode in
                 EpisodeRatingSheet(series: item,
