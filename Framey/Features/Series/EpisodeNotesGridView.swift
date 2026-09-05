@@ -29,35 +29,20 @@ struct EpisodeNotesGridView: View {
     
     var body: some View {
         NavigationStack {
-            ScrollView([.vertical, .horizontal]) {
-                VStack(alignment: .leading, spacing: 6) {
-                    legend
-                    
-                    // En-tête des colonnes : S1, S2, ...
-                    HStack(spacing: 4) {
-                        Text("").frame(width: 30)
-                        ForEach(seasons, id: \.season_number) { season in
-                            Text("S\(season.season_number)")
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(.gray)
-                                .frame(width: 46)
+            // Horizontal extérieur : les colonnes (saisons) défilent ensemble, librement
+            ScrollView(.horizontal, showsIndicators: false) {
+                // Vertical intérieur : défilement "lourd" qui s'aimante aux lignes
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        headerRow
+                        ForEach(1...max(maxEpisodes, 1), id: \.self) { episodeNumber in
+                            row(episodeNumber)
                         }
                     }
-                    
-                    // Lignes d'épisodes : E1, E2, ...
-                    ForEach(1...max(maxEpisodes, 1), id: \.self) { episodeNumber in
-                        HStack(spacing: 4) {
-                            Text("E\(episodeNumber)")
-                                .font(.caption2)
-                                .foregroundStyle(.gray)
-                                .frame(width: 30)
-                            ForEach(seasons, id: \.season_number) { season in
-                                cell(season: season, episodeNumber: episodeNumber)
-                            }
-                        }
-                    }
+                    .scrollTargetLayout()
+                    .padding()
                 }
-                .padding()
+                .scrollTargetBehavior(.viewAligned)
             }
             .background(Color.black.ignoresSafeArea())
             .navigationTitle("Mes notes d'épisodes")
@@ -89,29 +74,32 @@ struct EpisodeNotesGridView: View {
         }
     }
     
-    // MARK: - Légende
+    // MARK: - Grille compacte (S1E1 visible dès l'ouverture)
     
-    private var legend: some View {
-        HStack(spacing: 12) {
-            legendDot(.red, "À fuir")
-            legendDot(.yellow, "Moyen")
-            legendDot(Color(red: 0.6, green: 0.8, blue: 0.1), "Sympa")
-            legendDot(Color(red: 0, green: 0.5, blue: 0.1), "Très bon")
-            legendDot(Color(red: 0, green: 0.35, blue: 0.1), "Chef-d'œuvre")
-        }
-        .font(.caption2)
-        .foregroundStyle(.gray)
-        .padding(.bottom, 8)
-    }
-    
-    private func legendDot(_ color: Color, _ label: String) -> some View {
-        HStack(spacing: 4) {
-            Circle().fill(color).frame(width: 8, height: 8)
-            Text(label)
+    private var headerRow: some View {
+        HStack(spacing: 3) {
+            Text("")
+                .frame(width: 26)
+            ForEach(seasons, id: \.season_number) { season in
+                Text("S\(season.season_number)")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.gray)
+                    .frame(width: 40)
+            }
         }
     }
     
-    // MARK: - Une case = un épisode
+    private func row(_ episodeNumber: Int) -> some View {
+        HStack(spacing: 3) {
+            Text("E\(episodeNumber)")
+                .font(.caption2)
+                .foregroundStyle(.gray)
+                .frame(width: 26)
+            ForEach(seasons, id: \.season_number) { season in
+                cell(season: season, episodeNumber: episodeNumber)
+            }
+        }
+    }
     
     @ViewBuilder
     private func cell(season: TVSeason, episodeNumber: Int) -> some View {
@@ -125,16 +113,15 @@ struct EpisodeNotesGridView: View {
                 episodeToRate = episode
             } label: {
                 Text(rating.map { $0.formatted(.number.precision(.fractionLength(1))) } ?? "·")
-                    .font(.caption2.weight(.bold))
+                    .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(.white)
-                    .frame(width: 46, height: 32)
+                    .frame(width: 40, height: 26)
                     .background(rating.map { ratingColor($0) } ?? Color.white.opacity(0.06),
-                                in: RoundedRectangle(cornerRadius: 6))
+                                in: RoundedRectangle(cornerRadius: 5))
             }
             .buttonStyle(.plain)
         } else {
-            // Saison plus courte : case vide
-            Color.clear.frame(width: 46, height: 32)
+            Color.clear.frame(width: 40, height: 26)
         }
     }
     
