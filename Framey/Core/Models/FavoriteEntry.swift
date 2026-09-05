@@ -11,7 +11,7 @@ import SwiftData
 @Model
 final class FavoriteEntry {
     var mediaId: Int
-    var mediaTypeRaw: String
+    var mediaTypeRaw: String = "movie"
     var title: String = ""
     var posterPath: String?
     var position: Int = 0
