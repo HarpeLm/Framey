@@ -37,3 +37,4 @@ extension WatchlistEntry {
         MediaItemEntity(id: mediaId, mediaType: mediaType, title: title, posterPath: posterPath)
     }
 }
+
