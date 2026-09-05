@@ -18,7 +18,7 @@ struct MainTabView: View {
             }
             Tab("Séries", systemImage: "tv") {
                 NavigationStack {
-                    SeriesFeedView()
+                    SeriesFeedView(mode: .tab)
                         .navigationDestination(for: MediaItemEntity.self) { item in
                             SeriesDetailView(item: item)
                         }

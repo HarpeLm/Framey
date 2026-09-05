@@ -6,6 +6,8 @@ struct HomeView: View {
     @State private var selectedTab: HomeTab = .accueil
     @State private var path = NavigationPath()
     @State private var listOptionsTarget: ListEntity?
+    @State private var topSeries: [MediaItemEntity] = []
+    @State private var seriesReleases: [MediaItemEntity] = []
     @Environment(\.modelContext) private var modelContext
     @State private var showingNewList = false
     @State private var newListName = ""
@@ -19,6 +21,11 @@ struct HomeView: View {
     
     private var featured: [MediaItemEntity] {
         viewModel.featuredMovies(excludingWatchedIds: watchedIds)
+    }
+    
+    /// Hero mixte : 3 top films + 3 top séries
+    private var heroItems: [MediaItemEntity] {
+        Array(featured.prefix(3)) + Array(topSeries.prefix(3))
     }
     
     var body: some View {
@@ -35,10 +42,14 @@ struct HomeView: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 28) {
                             if selectedTab == .accueil {
-                                FeaturedHero(movies: featured, isLoading: viewModel.isLoading)
+                                FeaturedHero(movies: heroItems, isLoading: viewModel.isLoading)
                                 
                                 if !viewModel.nowPlaying.isEmpty {
                                     cinemaSection
+                                }
+                                
+                                if !seriesReleases.isEmpty {
+                                    seriesReleasesRow
                                 }
                                 
                                 if !watchlist.isEmpty {
@@ -65,7 +76,6 @@ struct HomeView: View {
                                     }
                                 }
                                 
-                                // Toujours afficher la rangée listes (même vide) pour avoir la carte "Nouvelle liste"
                                 listsRow
                             } else if selectedTab == .series {
                                 SeriesFeedView()
@@ -111,6 +121,17 @@ struct HomeView: View {
             }
         }
         .task { await viewModel.load() }
+        .task { await loadSeries() }
+    }
+    
+    // MARK: - Chargement des séries (hero + sorties)
+    
+    private func loadSeries() async {
+        let region = Locale.current.region?.identifier ?? "FR"
+        async let popular = MovieService.fetchPopularTV()
+        async let onAir = MovieService.fetchOnTheAirTV(region: region)
+        topSeries = (try? await popular) ?? []
+        seriesReleases = (try? await onAir) ?? []
     }
     
     // MARK: - Actuellement au cinéma
@@ -142,6 +163,21 @@ struct HomeView: View {
         }
     }
     
+    // MARK: - Sorties séries du moment
+    
+    private var seriesReleasesRow: some View {
+        MediaRow(title: "Sorties séries du moment",
+                 items: seriesReleases,
+                 onSeeAll: { selectedTab = .series }) { serie in
+            AnyView(
+                NavigationLink(value: serie) {
+                    MediaPosterCard(title: serie.title, posterPath: serie.posterPath)
+                }
+                .buttonStyle(.plain)
+            )
+        }
+    }
+    
     // MARK: - Rangée Listes
     
     private var listsRow: some View {
@@ -159,7 +195,6 @@ struct HomeView: View {
             
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    // Cartes des listes existantes
                     ForEach(lists) { list in
                         VStack(alignment: .leading, spacing: 4) {
                             RoundedRectangle(cornerRadius: 12)
@@ -183,7 +218,6 @@ struct HomeView: View {
                         .onLongPressGesture { listOptionsTarget = list }
                     }
                     
-                    // Carte "Nouvelle liste" APRÈS le ForEach (dernière carte de la rangée)
                     Button {
                         showingNewList = true
                     } label: {

@@ -43,7 +43,7 @@ struct FeaturedHeroCard: View {
             }
             .overlay(alignment: .topLeading) {
                 HStack {
-                    Text("À l'affiche")
+                    Text(movie.mediaType == .tv ? "Série à la une" : "À l'affiche")
                         .font(.caption.bold())
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
