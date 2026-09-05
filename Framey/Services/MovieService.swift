@@ -13,6 +13,16 @@ struct TMDBMovie: Decodable {
     let overview: String
 }
 
+struct TMDBPerson: Decodable {
+    let id: Int
+    let name: String
+    let profile_path: String?
+}
+
+struct TMDBPersonResponse: Decodable {
+    let results: [TMDBPerson]
+}
+
 enum MovieService {
 
     static func fetchPopularMovies() async throws -> [MediaItemEntity] {
@@ -46,6 +56,26 @@ enum MovieService {
         }
         let urlString = "https://api.themoviedb.org/3/search/movie?api_key=\(Secrets.tmdbApiKey)&language=fr-FR&query=\(encoded)"
         return try await fetchMovies(urlString: urlString)
+    }
+
+    static func searchPeople(query: String) async throws -> [TMDBPerson] {
+        guard let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+            throw NetworkError.invalidURL
+        }
+        let urlString = "https://api.themoviedb.org/3/search/person?api_key=\(Secrets.tmdbApiKey)&language=fr-FR&query=\(encoded)"
+        
+        guard let url = URL(string: urlString) else {
+            throw NetworkError.invalidURL
+        }
+        
+        let (data, response) = try await URLSession.shared.data(from: url)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw NetworkError.serverError
+        }
+        
+        return try JSONDecoder().decode(TMDBPersonResponse.self, from: data).results
     }
 
     private static func fetchMovies(urlString: String) async throws -> [MediaItemEntity] {

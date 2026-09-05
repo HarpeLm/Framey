@@ -9,10 +9,13 @@ struct ProfileView: View {
     @State private var showingEditSheet = false
     @State private var showingPickFavorite = false
     @State private var profilePhoto: Data?
+    @State private var showingPickDirector = false
     @Query(sort: \WatchedEntry.dateWatched, order: .reverse) private var watched: [WatchedEntry]
     @Query(sort: \WatchlistEntry.dateAdded, order: .reverse) private var watchlist: [WatchlistEntry]
     @Query(sort: \ListEntity.dateCreated) private var lists: [ListEntity]
     @Query(sort: \FavoriteEntry.position) private var favorites: [FavoriteEntry]
+    @Query(sort: \FavoriteDirectorEntry.position) private var favoriteDirectors: [FavoriteDirectorEntry]
+
     
     var body: some View {
         NavigationStack {
@@ -50,6 +53,10 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showingPickFavorite) {
                 PickFavoriteSheet()
+                    .preferredColorScheme(.dark)
+            }
+            .sheet(isPresented: $showingPickDirector) {
+                PickDirectorSheet()
                     .preferredColorScheme(.dark)
             }
             .onAppear {
@@ -96,15 +103,7 @@ struct ProfileView: View {
     // MARK: - À propos + les 5 favoris
     
     private var aboutSection: some View {
-        VStack(spacing: 16) {
-            Text("Membre Framey")
-                .font(.headline)
-                .foregroundStyle(.white)
-            Text("Je note et je journalise mes visionnages. 🎬")
-                .font(.caption)
-                .foregroundStyle(.gray)
-                .multilineTextAlignment(.center)
-            
+        VStack(spacing: 20) {
             VStack(alignment: .leading, spacing: 10) {
                 Text("Mes 5 films favoris")
                     .font(.subheadline.weight(.semibold))
@@ -117,10 +116,75 @@ struct ProfileView: View {
                 }
             }
             .padding(.horizontal, 20)
+            
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Mes réalisateurs préférés")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                
+                HStack(spacing: 16) {
+                    ForEach(0..<3, id: \.self) { index in
+                        directorSlot(index)
+                    }
+                    Spacer()
+                }
+            }
+            .padding(.horizontal, 20)
         }
-        .padding(.horizontal, 20)
         .padding(.top, 12)
     }
+    
+    @ViewBuilder
+    private func directorSlot(_ index: Int) -> some View {
+        if let director = favoriteDirectors.first(where: { $0.position == index }) {
+            VStack(spacing: 6) {
+                AsyncImage(url: director.profilePath?.tmdbPosterURL()) { phase in
+                    if let image = phase.image {
+                        image.resizable().scaledToFill()
+                    } else {
+                        Circle().fill(.gray.opacity(0.3))
+                    }
+                }
+                .frame(width: 72, height: 72)
+                .clipShape(Circle())
+                
+                Text(director.name)
+                    .font(.caption2)
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .frame(width: 80)
+            }
+            .contextMenu {
+                Button(role: .destructive) {
+                    modelContext.delete(director)
+                } label: {
+                    Label("Retirer", systemImage: "heart.slash")
+                }
+            }
+        } else {
+            Button {
+                showingPickDirector = true
+            } label: {
+                VStack(spacing: 6) {
+                    Circle()
+                        .fill(.white.opacity(0.06))
+                        .frame(width: 72, height: 72)
+                        .overlay(
+                            Image(systemName: "plus")
+                                .font(.title3)
+                                .foregroundStyle(.purple)
+                        )
+                    Text("Ajouter")
+                        .font(.caption2)
+                        .foregroundStyle(.gray)
+                        .frame(width: 80)
+                }
+            }
+            .buttonStyle(.plain)
+        }
+    }
+    
+    
     
     @ViewBuilder
     private func favoriteSlot(_ index: Int) -> some View {
