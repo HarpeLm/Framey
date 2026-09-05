@@ -105,7 +105,7 @@ struct ProfileView: View {
     private var aboutSection: some View {
         VStack(spacing: 20) {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Mes 5 films favoris")
+                Text("Mon top 5 films & séries")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white)
                 

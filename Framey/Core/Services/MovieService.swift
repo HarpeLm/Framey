@@ -175,6 +175,14 @@ enum MovieService {
         return try await fetchTV(urlString: urlString)
     }
 
+    static func searchTV(query: String) async throws -> [MediaItemEntity] {
+        guard let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+            throw NetworkError.invalidURL
+        }
+        let urlString = "https://api.themoviedb.org/3/search/tv?api_key=\(Secrets.tmdbApiKey)&language=fr-FR&query=\(encoded)"
+        return try await fetchTV(urlString: urlString)
+    }
+
     static func fetchTVDetails(id: Int) async throws -> TVDetails {
         let urlString = "https://api.themoviedb.org/3/tv/\(id)?api_key=\(Secrets.tmdbApiKey)&language=fr-FR"
 

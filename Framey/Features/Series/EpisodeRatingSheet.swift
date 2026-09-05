@@ -17,8 +17,7 @@ struct EpisodeRatingSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Query private var episodeWatches: [EpisodeWatchEntry]
-    
-    @State private var rating: Double = 0
+    @State private var ratingText = ""
     
     init(series: MediaItemEntity, seasonNumber: Int, episode: TVEpisode) {
         self.series = series
@@ -35,6 +34,14 @@ struct EpisodeRatingSheet: View {
     
     private var existing: EpisodeWatchEntry? { episodeWatches.first }
     
+    private var parsedRating: Double? {
+        let normalized = ratingText.replacingOccurrences(of: ",", with: ".")
+        guard let value = Double(normalized) else { return nil }
+        return min(10, max(0, (value * 10).rounded() / 10))
+    }
+    
+    private var displayRating: Double { parsedRating ?? existing?.rating ?? 0 }
+    
     var body: some View {
         NavigationStack {
             VStack(spacing: 20) {
@@ -42,16 +49,28 @@ struct EpisodeRatingSheet: View {
                     .font(.headline)
                     .multilineTextAlignment(.center)
                 
-                Text(rating > 0 ? String(format: "%.1f", rating) : "—")
+                Text(displayRating > 0 ? displayRating.formatted(.number.precision(.fractionLength(1))) : "—")
                     .font(.system(size: 64, weight: .bold, design: .rounded))
-                    .foregroundStyle(rating > 0 ? ratingColor(rating) : .gray)
+                    .foregroundStyle(displayRating > 0 ? ratingColor(displayRating) : .gray)
                 
-                Slider(value: $rating, in: 0...10, step: 0.5)
-                    .tint(ratingColor(rating))
+                TextField("Ex : 8.3", text: $ratingText)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.center)
+                    .font(.title2.bold())
+                    .foregroundStyle(.white)
+                    .frame(width: 120)
+                    .padding(.vertical, 10)
+                    .background(.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
                 
-                Text(ratingLabel(rating))
+                Text(ratingLabel(displayRating))
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                
+                LinearGradient(colors: [.red, .yellow, Color(red: 0, green: 0.4, blue: 0.1)],
+                               startPoint: .leading, endPoint: .trailing)
+                    .frame(height: 4)
+                    .clipShape(Capsule())
+                    .padding(.horizontal, 40)
                 
                 Spacer()
             }
@@ -71,35 +90,32 @@ struct EpisodeRatingSheet: View {
                 }
             }
             .onAppear {
-                rating = existing?.rating ?? 0
+                if let rating = existing?.rating, rating > 0 {
+                    ratingText = rating.formatted(.number.precision(.fractionLength(1)))
+                }
             }
         }
         .presentationDetents([.medium])
     }
     
     private func save() {
-        if rating == 0 {
-            // Pas de note = on supprime l'entrée éventuelle
-            if let existing {
-                modelContext.delete(existing)
-            }
+        guard let value = parsedRating, value > 0 else {
+            if let existing { modelContext.delete(existing) }
             return
         }
         
         if let existing {
-            existing.rating = rating
+            existing.rating = value
             existing.dateWatched = .now
         } else {
-            let entry = EpisodeWatchEntry(
-                seriesId: series.id,
-                seriesTitle: series.title,
-                posterPath: series.posterPath,
-                seasonNumber: seasonNumber,
-                episodeNumber: episode.episode_number,
-                episodeTitle: episode.name,
-                rating: rating,
-                dateWatched: .now
-            )
+            let entry = EpisodeWatchEntry(seriesId: series.id,
+                                          seriesTitle: series.title,
+                                          posterPath: series.posterPath,
+                                          seasonNumber: seasonNumber,
+                                          episodeNumber: episode.episode_number,
+                                          episodeTitle: episode.name,
+                                          rating: value,
+                                          dateWatched: .now)
             modelContext.insert(entry)
         }
     }
@@ -109,14 +125,10 @@ struct EpisodeRatingSheet: View {
         let r, g, b: Double
         if t <= 0.5 {
             let x = t * 2
-            r = 1.0
-            g = x
-            b = 0
+            r = 1.0; g = x; b = 0
         } else {
             let x = (t - 0.5) * 2
-            r = 1.0 - x
-            g = 1.0 - (0.6 * x)
-            b = 0 + (0.1 * x)
+            r = 1.0 - x; g = 1.0 - (0.6 * x); b = 0 + (0.1 * x)
         }
         return Color(red: r, green: g, blue: b)
     }

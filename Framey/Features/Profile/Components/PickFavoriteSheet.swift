@@ -9,10 +9,17 @@ import SwiftUI
 import SwiftData
 
 struct PickFavoriteSheet: View {
+    enum Scope: String, CaseIterable, Identifiable {
+        case movies = "Films"
+        case series = "Séries"
+        var id: String { rawValue }
+    }
+    
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \FavoriteEntry.position) private var favorites: [FavoriteEntry]
     @State private var query = ""
     @State private var results: [MediaItemEntity] = []
+    @State private var scope: Scope = .movies
     
     var body: some View {
         NavigationStack {
@@ -27,29 +34,38 @@ struct PickFavoriteSheet: View {
             .background(Color.black.ignoresSafeArea())
             .navigationTitle("Choisir un favori")
             .navigationBarTitleDisplayMode(.inline)
-            .safeAreaInset(edge: .top) { searchBar }
+            .safeAreaInset(edge: .top) { searchHeader }
             .task(id: query) { await runSearch() }
+            .onChange(of: scope) { results = [] }
         }
         .presentationDetents([.medium, .large])
     }
     
-    private var searchBar: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(.gray)
-            TextField("Rechercher un film…", text: $query)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
-                .foregroundStyle(.white)
-            if !query.isEmpty {
-                Button { query = "" } label: {
-                    Image(systemName: "xmark.circle.fill")
+    private var searchHeader: some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass").foregroundStyle(.gray)
+                TextField(scope == .movies ? "Rechercher un film…" : "Rechercher une série…", text: $query)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                    .foregroundStyle(.white)
+                if !query.isEmpty {
+                    Button { query = "" } label: {
+                        Image(systemName: "xmark.circle.fill")
+                    }
+                    .foregroundStyle(.gray)
                 }
-                .foregroundStyle(.gray)
             }
+            .padding(10)
+            .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+            
+            Picker("Type", selection: $scope) {
+                ForEach(Scope.allCases) { s in
+                    Text(s.rawValue).tag(s)
+                }
+            }
+            .pickerStyle(.segmented)
         }
-        .padding(10)
-        .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
         .padding(.horizontal, 20)
         .padding(.bottom, 8)
         .background(.black)
@@ -70,10 +86,15 @@ struct PickFavoriteSheet: View {
             .frame(width: 40, height: 60)
             .clipShape(RoundedRectangle(cornerRadius: 6))
             
-            Text(movie.title)
-                .font(.subheadline)
-                .foregroundStyle(.white)
-                .lineLimit(2)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(movie.title)
+                    .font(.subheadline)
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                Text(movie.mediaType == .tv ? "Série" : "Film")
+                    .font(.caption2)
+                    .foregroundStyle(.gray)
+            }
             
             Spacer()
             
@@ -119,7 +140,12 @@ struct PickFavoriteSheet: View {
         try? await Task.sleep(for: .milliseconds(400))
         guard !Task.isCancelled else { return }
         
-        results = (try? await MovieService.searchMovies(query: trimmed)) ?? []
+        switch scope {
+        case .movies:
+            results = (try? await MovieService.searchMovies(query: trimmed)) ?? []
+        case .series:
+            results = (try? await MovieService.searchTV(query: trimmed)) ?? []
+        }
     }
 }
 
