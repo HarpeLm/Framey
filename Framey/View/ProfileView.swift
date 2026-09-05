@@ -1,22 +1,18 @@
-//
-//  ProfileView.swift
-//  Framey
-//
-//  Created by Fabian Dargaud on 03/09/2026.
-//
-
 import SwiftUI
 import SwiftData
 
 struct ProfileView: View {
     @AppStorage("username") private var username = "Cinéphile"
     @AppStorage("handle") private var handle = "@framey"
+    @Environment(\.modelContext) private var modelContext
     @State private var selectedTab: ProfileTab = .activite
     @State private var showingEditSheet = false
+    @State private var showingPickFavorite = false
     @State private var profilePhoto: Data?
     @Query(sort: \WatchedEntry.dateWatched, order: .reverse) private var watched: [WatchedEntry]
     @Query(sort: \WatchlistEntry.dateAdded, order: .reverse) private var watchlist: [WatchlistEntry]
     @Query(sort: \ListEntity.dateCreated) private var lists: [ListEntity]
+    @Query(sort: \FavoriteEntry.position) private var favorites: [FavoriteEntry]
     
     var body: some View {
         NavigationStack {
@@ -24,11 +20,6 @@ struct ProfileView: View {
                 VStack(spacing: 24) {
                     ProfileHeader(username: username, handle: handle, photoData: profilePhoto)
                     statsGrid
-                    
-                    if !favoriteMovies.isEmpty {
-                        favoritesCarousel
-                    }
-                    
                     ProfileSegmentBar(selectedTab: $selectedTab)
                     tabContent
                 }
@@ -57,6 +48,10 @@ struct ProfileView: View {
                 ProfileEditSheet(username: $username, handle: $handle)
                     .preferredColorScheme(.dark)
             }
+            .sheet(isPresented: $showingPickFavorite) {
+                PickFavoriteSheet()
+                    .preferredColorScheme(.dark)
+            }
             .onAppear {
                 profilePhoto = ProfilePhotoStore.load()
             }
@@ -71,7 +66,7 @@ struct ProfileView: View {
         }
     }
     
-    // MARK: - Stats (allégées)
+    // MARK: - Stats
     
     private var statsGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
@@ -87,40 +82,6 @@ struct ProfileView: View {
         }.count
     }
     
-    // MARK: - Favoris (top 5 notes)
-    
-    private var favoriteMovies: [WatchedEntry] {
-        Array(
-            watched
-                .filter { $0.rating != nil }
-                .sorted { ($0.rating ?? 0) > ($1.rating ?? 0) }
-                .prefix(5)
-        )
-    }
-    
-    private var favoritesCarousel: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Mes favoris")
-                .font(.headline)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 20)
-            
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(favoriteMovies) { entry in
-                        NavigationLink(value: entry.asMediaItem) {
-                            MediaPosterCard(title: entry.title,
-                                            posterPath: entry.posterPath,
-                                            rating: entry.rating)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.horizontal, 20)
-            }
-        }
-    }
-    
     // MARK: - Onglets
     
     @ViewBuilder
@@ -131,6 +92,82 @@ struct ProfileView: View {
         case .aPropos: aboutSection
         }
     }
+    
+    // MARK: - À propos + les 5 favoris
+    
+    private var aboutSection: some View {
+        VStack(spacing: 16) {
+            Text("Membre Framey")
+                .font(.headline)
+                .foregroundStyle(.white)
+            Text("Je note et je journalise mes visionnages. 🎬")
+                .font(.caption)
+                .foregroundStyle(.gray)
+                .multilineTextAlignment(.center)
+            
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Mes 5 films favoris")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                
+                HStack(spacing: 8) {
+                    ForEach(0..<5, id: \.self) { index in
+                        favoriteSlot(index)
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+    }
+    
+    @ViewBuilder
+    private func favoriteSlot(_ index: Int) -> some View {
+        if let fav = favorites.first(where: { $0.position == index }) {
+            // Case occupée : poster → tap = fiche film, appui long = retirer
+            NavigationLink(value: fav.asMediaItem) {
+                slotPoster(fav.posterPath)
+            }
+            .buttonStyle(.plain)
+            .contextMenu {
+                Button(role: .destructive) {
+                    modelContext.delete(fav)
+                } label: {
+                    Label("Retirer des favoris", systemImage: "heart.slash")
+                }
+            }
+        } else {
+            // Case vide : + au milieu → ouvre le picker
+            Button {
+                showingPickFavorite = true
+            } label: {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(.white.opacity(0.06))
+                    .frame(width: 64, height: 96)
+                    .overlay(
+                        Image(systemName: "plus")
+                            .font(.title3)
+                            .foregroundStyle(.purple)
+                    )
+            }
+            .buttonStyle(.plain)
+        }
+    }
+    
+    private func slotPoster(_ path: String?) -> some View {
+        AsyncImage(url: path?.tmdbPosterURL()) { phase in
+            if let image = phase.image {
+                image.resizable().scaledToFill()
+            } else {
+                Rectangle().fill(.gray.opacity(0.3))
+            }
+        }
+        .frame(width: 64, height: 96)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+    
+    // MARK: - Activité
     
     private var activityFeed: some View {
         Group {
@@ -152,6 +189,8 @@ struct ProfileView: View {
         }
     }
     
+    // MARK: - Listes
+    
     private var listsSection: some View {
         Group {
             if lists.isEmpty {
@@ -170,20 +209,6 @@ struct ProfileView: View {
                 .padding(.horizontal, 20)
             }
         }
-    }
-    
-    private var aboutSection: some View {
-        VStack(spacing: 8) {
-            Text("Membre Framey")
-                .font(.headline)
-                .foregroundStyle(.white)
-            Text("Je note et je journalise mes visionnages. 🎬")
-                .font(.caption)
-                .foregroundStyle(.gray)
-                .multilineTextAlignment(.center)
-        }
-        .padding(.horizontal, 40)
-        .padding(.top, 12)
     }
     
     private func listRow(_ list: ListEntity) -> some View {
@@ -247,5 +272,5 @@ struct ProfileView: View {
 #Preview {
     ProfileView()
         .preferredColorScheme(.dark)
-        .modelContainer(for: [MediaItemEntity.self, WatchedEntry.self, WatchlistEntry.self, ListEntity.self, ListItemEntry.self], inMemory: true)
+        .modelContainer(for: [MediaItemEntity.self, WatchedEntry.self, WatchlistEntry.self, ListEntity.self, ListItemEntry.self, FavoriteEntry.self], inMemory: true)
 }
