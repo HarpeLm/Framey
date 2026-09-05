@@ -35,9 +35,15 @@ struct MovieDetailView: View {
         })
     }
     
-    private var watchedEntry: WatchedEntry? { watchedEntries.first }
-    private var isWatched: Bool { watchedEntry != nil }
-    private var rating: Int { watchedEntry?.rating ?? 0 }
+    // MARK: - Calculs rewatch
+    
+    private var latestWatch: WatchedEntry? {
+        watchedEntries.sorted { $0.dateWatched > $1.dateWatched }.first
+    }
+    
+    private var watchCount: Int { watchedEntries.count }
+    private var isWatched: Bool { watchCount > 0 }
+    private var rating: Int { latestWatch?.rating ?? 0 }
     private var isInWatchlist: Bool { watchlistEntries.first != nil }
     private var isInAnyList: Bool { !listEntries.isEmpty }
     private var isLiked: Bool { likeEntries.first != nil }
@@ -70,29 +76,47 @@ struct MovieDetailView: View {
         }
     }
     
-    // MARK: - Actions SwiftData
+    // MARK: - Actions SwiftData (rewatch + retrait watchlist sur review)
     
+    /// Toggle "Vu" : si pas vu → crée un visionnage ; si déjà vu → supprime le dernier
     private func toggleWatched() {
-        if let entry = watchedEntry {
-            modelContext.delete(entry)
+        if isWatched {
+            // Supprime le dernier visionnage (comportement toggle)
+            if let latest = latestWatch {
+                modelContext.delete(latest)
+            }
         } else {
+            // Crée un nouveau visionnage daté d'aujourd'hui
             modelContext.insert(WatchedEntry(mediaId: item.id,
                                              mediaType: item.mediaType,
                                              title: item.title,
-                                             posterPath: item.posterPath))
+                                             posterPath: item.posterPath,
+                                             dateWatched: .now))
             removeFromWatchlist()
         }
     }
     
+    /// Rewatch : ajoute un nouveau visionnage (sans supprimer l'ancien)
+    private func rewatch() {
+        modelContext.insert(WatchedEntry(mediaId: item.id,
+                                         mediaType: item.mediaType,
+                                         title: item.title,
+                                         posterPath: item.posterPath,
+                                         dateWatched: .now))
+        removeFromWatchlist()
+    }
+    
+    /// Note sur le dernier visionnage (crée un visionnage si nécessaire)
     private func setRating(_ value: Int) {
         let entry: WatchedEntry
-        if let existing = watchedEntry {
+        if let existing = latestWatch {
             entry = existing
         } else {
             entry = WatchedEntry(mediaId: item.id,
                                  mediaType: item.mediaType,
                                  title: item.title,
-                                 posterPath: item.posterPath)
+                                 posterPath: item.posterPath,
+                                 dateWatched: .now)
             modelContext.insert(entry)
         }
         entry.rating = (entry.rating == value) ? nil : value
@@ -126,6 +150,7 @@ struct MovieDetailView: View {
         }
     }
     
+    /// Sauvegarde review + retrait automatique watchlist (doc P0)
     private func saveReview() {
         let trimmed = reviewDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {
@@ -141,6 +166,8 @@ struct MovieDetailView: View {
             let entry = ReviewEntry(mediaId: item.id, mediaType: item.mediaType, text: trimmed)
             modelContext.insert(entry)
         }
+        // ✅ Retrait automatique watchlist quand on review (doc : "vu, loggé, noté ou reviewé")
+        removeFromWatchlist()
     }
     
     // MARK: - Header backdrop + poster
@@ -177,6 +204,15 @@ struct MovieDetailView: View {
                             .font(.footnote)
                             .foregroundStyle(.white.opacity(0.8))
                     }
+                    // Badge "Vu ×N" si rewatch
+                    if watchCount > 1 {
+                        Label("Vu ×\(watchCount)", systemImage: "arrow.clockwise")
+                            .font(.caption2.weight(.semibold))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(.green.opacity(0.3), in: Capsule())
+                            .foregroundStyle(.green)
+                    }
                 }
                 Spacer(minLength: 0)
             }
@@ -207,7 +243,7 @@ struct MovieDetailView: View {
         return parts.joined(separator: " • ")
     }
     
-    // MARK: - Actions
+    // MARK: - Actions (avec bouton Rewatch)
     
     private var actionsRow: some View {
         HStack(spacing: 0) {
@@ -216,6 +252,16 @@ struct MovieDetailView: View {
                          tint: isWatched ? .green : .gray) {
                 toggleWatched()
             }
+            
+            // ✅ Nouveau bouton Rewatch (visible seulement si déjà vu)
+            if isWatched {
+                actionButton("arrow.clockwise",
+                             "Rewatch",
+                             tint: .green) {
+                    rewatch()
+                }
+            }
+            
             actionButton(isInWatchlist ? "eye.fill" : "eye",
                          "Watchlist",
                          tint: isInWatchlist ? .blue : .gray) {

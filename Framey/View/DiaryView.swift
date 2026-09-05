@@ -10,6 +10,7 @@ import SwiftData
 
 struct DiaryView: View {
     @Query(sort: \WatchedEntry.dateWatched, order: .reverse) private var watched: [WatchedEntry]
+    @Environment(\.modelContext) private var modelContext
     
     var body: some View {
         Group {
@@ -18,17 +19,23 @@ struct DiaryView: View {
                                        systemImage: "book",
                                        description: Text("Marque des films comme vus pour remplir ton journal"))
             } else {
-                ScrollView {
-                    LazyVStack(spacing: 12) {
-                        ForEach(watched) { entry in
-                            NavigationLink(value: entry.asMediaItem) {
-                                diaryRow(entry)
-                            }
-                            .buttonStyle(.plain)
+                List {
+                    ForEach(watched) { entry in
+                        NavigationLink(value: entry.asMediaItem) {
+                            diaryRow(entry)
+                        }
+                        .buttonStyle(.plain)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparatorTint(.white.opacity(0.08))
+                    }
+                    .onDelete { indexSet in
+                        for index in indexSet {
+                            modelContext.delete(watched[index])
                         }
                     }
-                    .padding(20)
                 }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
             }
         }
         .background(Color.black.ignoresSafeArea())
@@ -67,8 +74,7 @@ struct DiaryView: View {
             }
             Spacer()
         }
-        .padding(10)
-        .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
+        .padding(.vertical, 4)
     }
 }
 
