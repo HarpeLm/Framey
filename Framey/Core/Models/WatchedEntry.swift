@@ -10,14 +10,13 @@ import SwiftData
 
 @Model
 final class WatchedEntry {
-    // ⚠️ PLUS de #Unique : un même film peut avoir PLUSIEURS visionnages (rewatch)
-    
     var mediaId: Int
     var mediaTypeRaw: String
     var title: String = ""
     var posterPath: String?
     var dateWatched: Date
-    var rating: Int?
+    var rating: Int?                  // Films : 1 à 5 étoiles
+    var seriesRating: Double? = nil   // Séries : 0.0 à 10.0
     
     var mediaType: MediaType {
         get { MediaType(rawValue: mediaTypeRaw) ?? .movie }

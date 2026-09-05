@@ -67,6 +67,8 @@ struct HomeView: View {
                                 
                                 // Toujours afficher la rangée listes (même vide) pour avoir la carte "Nouvelle liste"
                                 listsRow
+                            } else if selectedTab == .series {
+                                SeriesFeedView()
                             } else {
                                 comingSoon(tab: selectedTab)
                             }
@@ -78,7 +80,11 @@ struct HomeView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: MediaItemEntity.self) { item in
-                MovieDetailView(item: item)
+                if item.mediaType == .tv {
+                    SeriesDetailView(item: item)
+                } else {
+                    MovieDetailView(item: item)
+                }
             }
             .navigationDestination(for: HomeRoute.self) { route in
                 switch route {
@@ -153,7 +159,7 @@ struct HomeView: View {
             
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    // ✅ Cartes des listes existantes
+                    // Cartes des listes existantes
                     ForEach(lists) { list in
                         VStack(alignment: .leading, spacing: 4) {
                             RoundedRectangle(cornerRadius: 12)
@@ -177,7 +183,7 @@ struct HomeView: View {
                         .onLongPressGesture { listOptionsTarget = list }
                     }
                     
-                    // ✅ Carte "Nouvelle liste" APRÈS le ForEach (dernière carte de la rangée)
+                    // Carte "Nouvelle liste" APRÈS le ForEach (dernière carte de la rangée)
                     Button {
                         showingNewList = true
                     } label: {

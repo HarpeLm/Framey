@@ -14,6 +14,7 @@ struct FrameyApp: App {
             ReviewEntry.self,
             FavoriteEntry.self,
             FavoriteDirectorEntry.self,
+            EpisodeWatchEntry.self,
         ])
 
         let modelConfiguration = ModelConfiguration(

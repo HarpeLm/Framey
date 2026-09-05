@@ -23,7 +23,22 @@ struct TMDBPersonResponse: Decodable {
     let results: [TMDBPerson]
 }
 
+struct TMDBTV: Decodable {
+    let id: Int
+    let name: String
+    let first_air_date: String?
+    let poster_path: String?
+    let backdrop_path: String?
+    let overview: String
+}
+
+struct TMDBTVResponse: Decodable {
+    let results: [TMDBTV]
+}
+
 enum MovieService {
+
+    // MARK: - Films
 
     static func fetchPopularMovies() async throws -> [MediaItemEntity] {
         async let page1 = fetchPopularPage(1)
@@ -141,6 +156,84 @@ enum MovieService {
         let decoded = try JSONDecoder().decode(WatchProvidersResponse.self, from: data)
         let providers = decoded.results[region]?.flatrate ?? []
         return providers.sorted { ($0.display_priority ?? 999) < ($1.display_priority ?? 999) }
+    }
+
+    // MARK: - Séries (TMDB /tv)
+
+    static func fetchPopularTV() async throws -> [MediaItemEntity] {
+        let urlString = "https://api.themoviedb.org/3/tv/popular?api_key=\(Secrets.tmdbApiKey)&language=fr-FR&page=1"
+        return try await fetchTV(urlString: urlString)
+    }
+
+    static func fetchOnTheAirTV(region: String) async throws -> [MediaItemEntity] {
+        let urlString = "https://api.themoviedb.org/3/tv/on_the_air?api_key=\(Secrets.tmdbApiKey)&language=fr-FR&region=\(region)&page=1"
+        return try await fetchTV(urlString: urlString)
+    }
+
+    static func fetchTopRatedTV() async throws -> [MediaItemEntity] {
+        let urlString = "https://api.themoviedb.org/3/tv/top_rated?api_key=\(Secrets.tmdbApiKey)&language=fr-FR&page=1"
+        return try await fetchTV(urlString: urlString)
+    }
+
+    static func fetchTVDetails(id: Int) async throws -> TVDetails {
+        let urlString = "https://api.themoviedb.org/3/tv/\(id)?api_key=\(Secrets.tmdbApiKey)&language=fr-FR"
+
+        guard let url = URL(string: urlString) else {
+            throw NetworkError.invalidURL
+        }
+
+        let (data, response) = try await URLSession.shared.data(from: url)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw NetworkError.serverError
+        }
+
+        return try JSONDecoder().decode(TVDetails.self, from: data)
+    }
+    
+    static func fetchTVSeason(seriesId: Int, seasonNumber: Int) async throws -> TVSeason {
+        let urlString = "https://api.themoviedb.org/3/tv/\(seriesId)/season/\(seasonNumber)?api_key=\(Secrets.tmdbApiKey)&language=fr-FR"
+        
+        guard let url = URL(string: urlString) else {
+            throw NetworkError.invalidURL
+        }
+        
+        let (data, response) = try await URLSession.shared.data(from: url)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw NetworkError.serverError
+        }
+        
+        return try JSONDecoder().decode(TVSeason.self, from: data)
+    }
+
+    private static func fetchTV(urlString: String) async throws -> [MediaItemEntity] {
+        guard let url = URL(string: urlString) else {
+            throw NetworkError.invalidURL
+        }
+
+        let (data, response) = try await URLSession.shared.data(from: url)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw NetworkError.serverError
+        }
+
+        let result = try JSONDecoder().decode(TMDBTVResponse.self, from: data)
+
+        return result.results.map { tv in
+            MediaItemEntity(
+                id: tv.id,
+                mediaType: .tv,
+                title: tv.name,
+                releaseDate: tv.first_air_date?.toDate(),
+                posterPath: tv.poster_path,
+                backdropPath: tv.backdrop_path,
+                overview: tv.overview
+            )
+        }
     }
 }
 

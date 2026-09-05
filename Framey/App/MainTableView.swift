@@ -16,11 +16,11 @@ struct MainTabView: View {
             Tab("Films", systemImage: "film") {
                 FilmsView()
             }
-            Tab("Diary", systemImage: "book") {
+            Tab("Séries", systemImage: "tv") {
                 NavigationStack {
-                    DiaryView()
+                    SeriesFeedView()
                         .navigationDestination(for: MediaItemEntity.self) { item in
-                            MovieDetailView(item: item)
+                            SeriesDetailView(item: item)
                         }
                 }
             }
