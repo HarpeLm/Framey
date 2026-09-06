@@ -19,6 +19,24 @@ struct TMDBPerson: Decodable {
     let profile_path: String?
 }
 
+struct TMDBMultiSearchResponse: Decodable {
+    let results: [TMDBMultiSearchItem]
+}
+
+struct TMDBMultiSearchItem: Decodable {
+    let id: Int
+    let media_type: String
+    let title: String?
+    let name: String?
+    let release_date: String?
+    let first_air_date: String?
+    let poster_path: String?
+    let backdrop_path: String?
+    let overview: String?
+    let popularity: Double?
+}
+
+
 struct TMDBPersonResponse: Decodable {
     let results: [TMDBPerson]
 }
@@ -242,6 +260,56 @@ enum MovieService {
         }
         
         return try JSONDecoder().decode(TVSeason.self, from: data)
+    }
+    
+    static func searchMulti(query: String) async throws -> [MediaItemEntity] {
+        guard let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+            throw NetworkError.invalidURL
+        }
+        
+        let urlString = "https://api.themoviedb.org/3/search/multi?api_key=\(Secrets.tmdbApiKey)&language=fr-FR&query=\(encoded)&include_adult=false"
+        
+        guard let url = URL(string: urlString) else {
+            throw NetworkError.invalidURL
+        }
+        
+        let (data, response) = try await URLSession.shared.data(from: url)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw NetworkError.serverError
+        }
+        
+        let decoded = try JSONDecoder().decode(TMDBMultiSearchResponse.self, from: data)
+        
+        return decoded.results
+            .filter { $0.media_type == "movie" || $0.media_type == "tv" }
+            .sorted { ($0.popularity ?? 0) > ($1.popularity ?? 0) }
+            .compactMap { item in
+                if item.media_type == "movie" {
+                    guard let title = item.title else { return nil }
+                    return MediaItemEntity(
+                        id: item.id,
+                        mediaType: .movie,
+                        title: title,
+                        releaseDate: item.release_date?.toDate(),
+                        posterPath: item.poster_path,
+                        backdropPath: item.backdrop_path,
+                        overview: item.overview ?? ""
+                    )
+                } else {
+                    guard let name = item.name else { return nil }
+                    return MediaItemEntity(
+                        id: item.id,
+                        mediaType: .tv,
+                        title: name,
+                        releaseDate: item.first_air_date?.toDate(),
+                        posterPath: item.poster_path,
+                        backdropPath: item.backdrop_path,
+                        overview: item.overview ?? ""
+                    )
+                }
+            }
     }
 
     private static func fetchTV(urlString: String) async throws -> [MediaItemEntity] {

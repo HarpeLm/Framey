@@ -32,6 +32,9 @@ struct QuickLogSheet: View {
     @State private var existingLike: LikeEntry?
     @State private var existingReview: ReviewEntry?
     
+    
+    @Query(sort: \WatchedEntry.dateWatched, order: .reverse) private var watched: [WatchedEntry]
+    
     var body: some View {
         NavigationStack {
             Group {
@@ -92,6 +95,7 @@ struct QuickLogSheet: View {
             ScrollView {
                 if query.trimmingCharacters(in: .whitespaces).count < 2 {
                     recentSearchesSection
+                    recentTitlesSection
                 } else {
                     resultsList
                 }
@@ -99,7 +103,7 @@ struct QuickLogSheet: View {
         }
         .task(id: query) { await runSearch() }
     }
-    
+
     private var recentSearches: [String] {
         get {
             guard let data = recentSearchesData.data(using: .utf8),
@@ -141,9 +145,71 @@ struct QuickLogSheet: View {
         }
     }
     
+    private var recentTitlesSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if !recentTitles.isEmpty {
+                Text("Films & séries récents")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.gray)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                    .padding(.bottom, 4)
+                
+                ForEach(recentTitles, id: \.id) { item in
+                    Button {
+                        selected = item
+                        loadExisting(item)
+                    } label: {
+                        HStack(spacing: 12) {
+                            AsyncImage(url: item.posterPath?.tmdbPosterURL()) { phase in
+                                if let image = phase.image {
+                                    image.resizable().aspectRatio(2/3, contentMode: .fill)
+                                } else {
+                                    Rectangle().fill(.gray.opacity(0.3))
+                                }
+                            }
+                            .frame(width: 40, height: 60)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(item.title)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.white)
+                                    .lineLimit(2)
+                                Text(item.mediaType == .tv ? "Série" : "Film")
+                                    .font(.caption2)
+                                    .foregroundStyle(.gray)
+                            }
+                            Spacer()
+                            Image(systemName: "clock.arrow.circlepath")
+                                .foregroundStyle(.gray)
+                        }
+                        .padding(10)
+                        .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
+                        .padding(.horizontal, 20)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+    
+    private var recentTitles: [MediaItemEntity] {
+        var seen = Set<String>()
+        var result: [MediaItemEntity] = []
+        for entry in watched {
+            let key = "\(entry.mediaTypeRaw)-\(entry.mediaId)"
+            if seen.insert(key).inserted {
+                result.append(entry.asMediaItem)
+            }
+            if result.count >= 10 { break }
+        }
+        return result
+    }
+    
     private var resultsList: some View {
         LazyVStack(spacing: 10) {
-            ForEach(results, id: \.id) { item in
+            ForEach(Array(results.enumerated()), id: \.offset) { _, item in
                 Button {
                     addRecentSearch(query)
                     selected = item
@@ -425,14 +491,22 @@ struct QuickLogSheet: View {
             results = []
             return
         }
-        try? await Task.sleep(for: .milliseconds(400))
+        
+        try? await Task.sleep(for: .milliseconds(350))
         guard !Task.isCancelled else { return }
         
-        async let movies = MovieService.searchMovies(query: trimmed)
-        async let series = MovieService.searchTV(query: trimmed)
-        let m = (try? await movies) ?? []
-        let s = (try? await series) ?? []
-        results = Array((m + s).prefix(20))
+        if let multiResults = try? await MovieService.searchMulti(query: trimmed) {
+            results = Array(multiResults.prefix(40))
+        } else {
+            // Fallback si multi_search échoue
+            async let movies = MovieService.searchMovies(query: trimmed)
+            async let series = MovieService.searchTV(query: trimmed)
+            
+            let m = (try? await movies) ?? []
+            let s = (try? await series) ?? []
+            
+            results = Array((s + m).prefix(40))
+        }
     }
 }
 

@@ -6,64 +6,23 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct SearchView: View {
     @State private var query = ""
     @State private var movieResults: [MediaItemEntity] = []
     @State private var seriesResults: [MediaItemEntity] = []
     @State private var classics: [MediaItemEntity] = []
+    @AppStorage("recentSearchesData") private var recentSearchesData = ""
+    @Query(sort: \WatchedEntry.dateWatched, order: .reverse) private var watched: [WatchedEntry]
     
     /// Vrais classiques cultes (IDs TMDB), dans l'ordre voulu
     private static let classicIds: [Int] = [
-        278,    // Les Évadés
-        238,    // Le Parrain
-        240,    // Le Parrain 2
-        680,    // Pulp Fiction
-        550,    // Fight Club
-        13,     // Forrest Gump
-        603,    // Matrix
-        155,    // The Dark Knight
-        27205,  // Inception
-        157336, // Interstellar
-        424,    // La Liste de Schindler
-        769,    // Les Affranchis
-        807,    // Se7en
-        274,    // Le Silence des agneaux
-        15,     // Citizen Kane
-        289,    // Casablanca
-        539,    // Psychose
-        426,    // Vertigo
-        62,     // 2001, l'Odyssée de l'espace
-        11,     // Star Wars
-        1891,   // L'Empire contre-attaque
-        329,    // Jurassic Park
-        105,    // Retour vers le futur
-        348,    // Alien
-        78,     // Blade Runner
-        103,    // Taxi Driver
-        429,    // Le Bon, la Brute et le Truand
-        335,    // Il était une fois dans l'Ouest
-        194,    // Le Fabuleux Destin d'Amélie Poulain
-        129,    // Le Voyage de Chihiro
-        496243, // Parasite
-        244786, // Whiplash
-        423,    // Le Pianiste
-        857,    // Il faut sauver le soldat Ryan
-        497,    // La Ligne verte
-        98,     // Gladiator
-        120,    // La Communauté de l'anneau
-        122,    // Le Retour du roi
-        597,    // Titanic
-        101,    // Léon
-        18,     // Le Cinquième Élément
-        11216,  // Cinema Paradiso
-        389,    // 12 Hommes en colère
-        510,    // Vol au-dessus d'un nid de coucou
-        629,    // Usual Suspects
-        1124,   // Le Prestige
-        694,    // Shining
-        185,    // Orange mécanique
-        28      // Apocalypse Now
+        278, 238, 240, 680, 550, 13, 603, 155, 27205, 157336,
+        424, 769, 807, 274, 15, 289, 539, 426, 62, 11,
+        1891, 329, 105, 348, 78, 103, 429, 335, 194, 129,
+        496243, 244786, 423, 857, 497, 98, 120, 122, 597, 101,
+        18, 11216, 389, 510, 629, 1124, 694, 185, 28
     ]
     
     private var isSearching: Bool {
@@ -75,6 +34,32 @@ struct SearchView: View {
         GridItem(.flexible(), spacing: 12),
         GridItem(.flexible(), spacing: 12)
     ]
+    
+    private var recentSearches: [String] {
+        get {
+            guard let data = recentSearchesData.data(using: .utf8),
+                  let arr = try? JSONDecoder().decode([String].self, from: data) else { return [] }
+            return arr
+        }
+        nonmutating set {
+            let data = try? JSONEncoder().encode(newValue)
+            recentSearchesData = String(data: data ?? Data(), encoding: .utf8) ?? ""
+        }
+    }
+    
+    /// Derniers titres vus (films + séries mélangés, dédoublonnés)
+    private var recentTitles: [MediaItemEntity] {
+        var seen = Set<String>()
+        var result: [MediaItemEntity] = []
+        for entry in watched {
+            let key = "\(entry.mediaTypeRaw)-\(entry.mediaId)"
+            if seen.insert(key).inserted {
+                result.append(entry.asMediaItem)
+            }
+            if result.count >= 9 { break }
+        }
+        return result
+    }
     
     var body: some View {
         ScrollView {
@@ -95,12 +80,25 @@ struct SearchView: View {
                             .frame(maxWidth: .infinity)
                             .padding(.top, 40)
                     }
-                } else if classics.isEmpty {
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, 60)
                 } else {
-                    gridSection(title: "Classiques cultes", items: classics)
+                    // 1. Recherches récentes
+                    if !recentSearches.isEmpty {
+                        recentSearchesSection
+                    }
+                    
+                    // 2. Films & séries récents EN PREMIER
+                    if !recentTitles.isEmpty {
+                        gridSection(title: "Vus récemment", items: recentTitles)
+                    }
+                    
+                    // 3. Puis les classiques
+                    if classics.isEmpty {
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 20)
+                    } else {
+                        gridSection(title: "Classiques cultes", items: classics)
+                    }
                 }
             }
             .padding(.top, 16)
@@ -111,36 +109,6 @@ struct SearchView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task { await loadClassics() }
         .task(id: query) { await runSearch() }
-    }
-    
-    // MARK: - Chargement des classiques (Sendable-safe)
-    
-    private func loadClassics() async {
-        // 1. Récupère en parallèle des structs Sendable (TMDBMovie)
-        let movies = await withTaskGroup(of: TMDBMovie?.self) { group in
-            for id in Self.classicIds {
-                group.addTask { try? await MovieService.fetchMovie(id: id) }
-            }
-            var result: [TMDBMovie] = []
-            for await movie in group {
-                if let movie { result.append(movie) }
-            }
-            return result
-        }
-        
-        // 2. Convertit en MediaItemEntity sur le main actor, dans l'ordre voulu
-        classics = movies
-            .sorted { (Self.classicIds.firstIndex(of: $0.id) ?? 0) < (Self.classicIds.firstIndex(of: $1.id) ?? 0) }
-            .map { movie in
-                MediaItemEntity(
-                    id: movie.id,
-                    title: movie.title,
-                    releaseDate: movie.release_date?.toDate(),
-                    posterPath: movie.poster_path,
-                    backdropPath: movie.backdrop_path,
-                    overview: movie.overview
-                )
-            }
     }
     
     // MARK: - Barre de recherche
@@ -166,6 +134,36 @@ struct SearchView: View {
         .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
     }
     
+    // MARK: - Recherches récentes
+    
+    private var recentSearchesSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Recherches récentes")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.gray)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 4)
+            
+            ForEach(recentSearches, id: \.self) { term in
+                Button {
+                    query = term
+                } label: {
+                    HStack {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.caption)
+                            .foregroundStyle(.gray)
+                        Text(term)
+                            .foregroundStyle(.white)
+                        Spacer()
+                    }
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 20)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+    
     // MARK: - Grille verticale
     
     private func gridSection(title: String, items: [MediaItemEntity]) -> some View {
@@ -181,13 +179,54 @@ struct SearchView: View {
                         PosterGridCard(title: item.title, posterPath: item.posterPath)
                     }
                     .buttonStyle(.plain)
+                    .simultaneousGesture(TapGesture().onEnded {
+                        addRecentSearch(query)
+                    })
                 }
             }
             .padding(.horizontal, 20)
         }
     }
     
-    // MARK: - Recherche unifiée (debounce)
+    // MARK: - Logique
+    
+    private func addRecentSearch(_ term: String) {
+        let trimmed = term.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        var current = recentSearches
+        current.removeAll { $0.lowercased() == trimmed.lowercased() }
+        current.insert(trimmed, at: 0)
+        recentSearches = Array(current.prefix(8))
+    }
+    
+    private func loadClassics() async {
+        var fetched: [TMDBMovie] = []
+        await withTaskGroup(of: TMDBMovie?.self) { group in
+            for id in Self.classicIds {
+                group.addTask { () -> TMDBMovie? in
+                    try? await MovieService.fetchMovie(id: id)
+                }
+            }
+            for await movie in group {
+                if let movie {
+                    fetched.append(movie)
+                }
+            }
+        }
+        
+        classics = fetched
+            .sorted { (Self.classicIds.firstIndex(of: $0.id) ?? 0) < (Self.classicIds.firstIndex(of: $1.id) ?? 0) }
+            .map { movie in
+                MediaItemEntity(
+                    id: movie.id,
+                    title: movie.title,
+                    releaseDate: movie.release_date?.toDate(),
+                    posterPath: movie.poster_path,
+                    backdropPath: movie.backdrop_path,
+                    overview: movie.overview
+                )
+            }
+    }
     
     private func runSearch() async {
         let trimmed = query.trimmingCharacters(in: .whitespaces)
@@ -213,4 +252,5 @@ struct SearchView: View {
         SearchView()
             .preferredColorScheme(.dark)
     }
+    .modelContainer(for: [WatchedEntry.self], inMemory: true)
 }
