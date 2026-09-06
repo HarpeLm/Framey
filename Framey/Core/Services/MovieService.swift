@@ -311,7 +311,26 @@ enum MovieService {
                 }
             }
     }
-
+    
+    static func fetchTVWatchProviders(id: Int, region: String) async throws -> [WatchProvider] {
+        let urlString = "https://api.themoviedb.org/3/tv/\(id)/watch/providers?api_key=\(Secrets.tmdbApiKey)"
+        
+        guard let url = URL(string: urlString) else {
+            throw NetworkError.invalidURL
+        }
+        
+        let (data, response) = try await URLSession.shared.data(from: url)
+        
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            throw NetworkError.serverError
+        }
+        
+        let decoded = try JSONDecoder().decode(WatchProvidersResponse.self, from: data)
+        let providers = decoded.results[region]?.flatrate ?? []
+        return providers.sorted { ($0.display_priority ?? 999) < ($1.display_priority ?? 999) }
+    }
+    
     private static func fetchTV(urlString: String) async throws -> [MediaItemEntity] {
         guard let url = URL(string: urlString) else {
             throw NetworkError.invalidURL

@@ -15,8 +15,6 @@ struct ProfileView: View {
     @Query(sort: \ListEntity.dateCreated) private var lists: [ListEntity]
     @Query(sort: \FavoriteEntry.position) private var favorites: [FavoriteEntry]
     @Query(sort: \FavoriteDirectorEntry.position) private var favoriteDirectors: [FavoriteDirectorEntry]
-    @Query(sort: \CollectionEntry.dateAdded, order: .reverse) private var collection: [CollectionEntry]
-
     
     var body: some View {
         NavigationStack {
@@ -98,7 +96,6 @@ struct ProfileView: View {
         case .activite: activityFeed
         case .listes: listsSection
         case .watchlist: watchlistSection
-        case .collection: collectionSection
         case .aPropos: aboutSection
         }
     }
@@ -299,55 +296,7 @@ struct ProfileView: View {
             }
         }
     }
-    
-    private var collectionSection: some View {
-        Group {
-            if collection.isEmpty {
-                ContentUnavailableView("Collection vide",
-                                       systemImage: "shippingbox",
-                                       description: Text("Ajoute les films que tu possèdes depuis leurs fiches"))
-            } else {
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
-                                    GridItem(.flexible(), spacing: 12),
-                                    GridItem(.flexible(), spacing: 12)], spacing: 16) {
-                    ForEach(collection) { entry in
-                        collectionCard(entry)
-                    }
-                }
-                .padding(.horizontal, 20)
-            }
-        }
-    }
-    
-    private func collectionCard(_ entry: CollectionEntry) -> some View {
-        NavigationLink(value: entry.asMediaItem) {
-            PosterGridCard(title: entry.title, posterPath: entry.posterPath)
-                .overlay(alignment: .topLeading) {
-                    Text(entry.format.rawValue)
-                        .font(.caption2.bold())
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(.black.opacity(0.7), in: Capsule())
-                        .foregroundStyle(.white)
-                        .padding(6)
-                }
-        }
-        .buttonStyle(.plain)
-        .contextMenu {
-            Menu("Format") {
-                ForEach(CollectionFormat.allCases) { format in
-                    Button(format.rawValue) {
-                        entry.format = format
-                    }
-                }
-            }
-            Button(role: .destructive) {
-                modelContext.delete(entry)
-            } label: {
-                Label("Retirer de la collection", systemImage: "trash")
-            }
-        }
-    }
+
     
     
     private func listRow(_ list: ListEntity) -> some View {

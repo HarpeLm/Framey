@@ -8,7 +8,7 @@
 import Foundation
 
 enum ProfileTab: String, CaseIterable, Identifiable {
-    case activite, listes, watchlist, collection, aPropos
+    case activite, listes, watchlist, aPropos
     
     var id: String { rawValue }
     
@@ -17,7 +17,6 @@ enum ProfileTab: String, CaseIterable, Identifiable {
         case .activite: "Activité"
         case .listes: "Listes"
         case .watchlist: "Watchlist"
-        case .collection: "Collection"
         case .aPropos: "À propos"
         }
     }

@@ -18,9 +18,11 @@ struct SeriesDetailView: View {
     @State private var selectedSeasonNumber = 1
     @State private var showingNotes = false
     @State private var ratingText = ""
+    @State private var providers: [WatchProvider] = []
     @State private var episodeToRateFromList: TVEpisode?
     @State private var ratingSeasonForSheet = 1
     @FocusState private var ratingFocused: Bool
+    
     
     // MARK: - SwiftData
     
@@ -63,6 +65,7 @@ struct SeriesDetailView: View {
                 actionsRow
                 seriesRatingCard
                 episodeRatingSection
+                streamingSection
                 if !item.overview.isEmpty {
                     synopsisSection
                 }
@@ -76,6 +79,8 @@ struct SeriesDetailView: View {
         .task {
             details = try? await MovieService.fetchTVDetails(id: item.id)
             await loadSeason(1)
+            let region = Locale.current.region?.identifier ?? "FR"
+            providers = (try? await MovieService.fetchTVWatchProviders(id: item.id, region: region)) ?? []
             if seriesRating > 0 {
                 ratingText = seriesRating.formatted(.number.precision(.fractionLength(1)))
             }
@@ -434,6 +439,42 @@ struct SeriesDetailView: View {
         case 9...10: "Chef-d'œuvre"
         default: "À noter"
         }
+    }
+    
+    private var streamingSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Où regarder").font(.headline)
+            
+            if providers.isEmpty {
+                Text("Non disponible en streaming")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(providers) { provider in
+                            VStack(spacing: 4) {
+                                AsyncImage(url: provider.logo_path?.tmdbPosterURL(size: .w185)) { image in
+                                    image.resizable().scaledToFill()
+                                } placeholder: {
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(.gray.opacity(0.3))
+                                }
+                                .frame(width: 60, height: 60)
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                
+                                Text(provider.provider_name)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                            .frame(width: 70)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(.horizontal)
     }
 }
 

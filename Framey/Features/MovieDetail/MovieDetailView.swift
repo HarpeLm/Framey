@@ -12,7 +12,6 @@ struct MovieDetailView: View {
     @Query private var watchlistEntries: [WatchlistEntry]
     @Query private var listEntries: [ListItemEntry]
     @Query private var likeEntries: [LikeEntry]
-    @Query private var collectionEntries: [CollectionEntry]
     @Query private var reviewEntries: [ReviewEntry]
     
     init(item: MediaItemEntity) {
@@ -32,9 +31,6 @@ struct MovieDetailView: View {
             $0.mediaId == id && $0.mediaTypeRaw == type
         })
         _reviewEntries = Query(filter: #Predicate<ReviewEntry> {
-            $0.mediaId == id && $0.mediaTypeRaw == type
-        })
-        _collectionEntries = Query(filter: #Predicate<CollectionEntry> {
             $0.mediaId == id && $0.mediaTypeRaw == type
         })
     }
@@ -256,15 +252,6 @@ struct MovieDetailView: View {
                          tint: isWatched ? .green : .gray) {
                 toggleWatched()
             }
-        
-            if isWatched {
-                actionButton("arrow.clockwise",
-                             "Rewatch",
-                             tint: .green) {
-                    rewatch()
-                }
-            }
-            
             actionButton(isInWatchlist ? "eye.fill" : "eye",
                          "Watchlist",
                          tint: isInWatchlist ? .blue : .gray) {
@@ -279,11 +266,6 @@ struct MovieDetailView: View {
                          "Like",
                          tint: isLiked ? .red : .gray) {
                 toggleLike()
-            }
-            actionButton(isInCollection ? "shippingbox.fill" : "shippingbox",
-                         "Collection",
-                         tint: isInCollection ? .orange : .gray) {
-                toggleCollection()
             }
         }
         .padding(.horizontal)
@@ -362,21 +344,6 @@ struct MovieDetailView: View {
         }
     }
     
-    
-    // MARK: - Collection Entries
-    
-    private var isInCollection: Bool { collectionEntries.first != nil }
-    
-    private func toggleCollection() {
-        if let entry = collectionEntries.first {
-            modelContext.delete(entry)
-        } else {
-            modelContext.insert(CollectionEntry(mediaId: item.id,
-                                                mediaType: item.mediaType,
-                                                title: item.title,
-                                                posterPath: item.posterPath))
-        }
-    }
     
     // MARK: - Ma critique
     
