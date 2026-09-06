@@ -17,19 +17,27 @@ final class WatchedEntry {
     var dateWatched: Date
     var rating: Int?                  // Films : 1 à 5 étoiles
     var seriesRating: Double? = nil   // Séries : 0.0 à 10.0
+    var tagsRaw: String = ""          // Tags séparés par des virgules
     
     var mediaType: MediaType {
         get { MediaType(rawValue: mediaTypeRaw) ?? .movie }
         set { mediaTypeRaw = newValue.rawValue }
     }
     
-    init(mediaId: Int, mediaType: MediaType = .movie, title: String = "", posterPath: String? = nil, dateWatched: Date = .now, rating: Int? = nil) {
+    var tags: [String] {
+        tagsRaw.split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+    }
+    
+    init(mediaId: Int, mediaType: MediaType = .movie, title: String = "", posterPath: String? = nil, dateWatched: Date = .now, rating: Int? = nil, tagsRaw: String = "") {
         self.mediaId = mediaId
         self.mediaTypeRaw = mediaType.rawValue
         self.title = title
         self.posterPath = posterPath
         self.dateWatched = dateWatched
         self.rating = rating
+        self.tagsRaw = tagsRaw
     }
 }
 
