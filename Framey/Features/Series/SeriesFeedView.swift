@@ -62,8 +62,16 @@ struct SeriesFeedView: View {
                     }
                 } else {
                     grid(items: viewModel.popular)
-                    topRatedRow
-                        .padding(.top, 12)
+                    
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Les mieux notées")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 20)
+                        
+                        grid(items: viewModel.topRated)
+                    }
+                    .padding(.top, 12)
                 }
             }
             .padding(.bottom, 40)
