@@ -10,10 +10,9 @@ import SwiftData
 
 struct SearchView: View {
     @State private var query = ""
-    @State private var movieResults: [MediaItemEntity] = []
-    @State private var seriesResults: [MediaItemEntity] = []
     @State private var classics: [MediaItemEntity] = []
     @AppStorage("recentSearchesData") private var recentSearchesData = ""
+    @State private var results: [MediaItemEntity] = []
     @Query(sort: \WatchedEntry.dateWatched, order: .reverse) private var watched: [WatchedEntry]
     
     /// Vrais classiques cultes (IDs TMDB), dans l'ordre voulu
@@ -68,17 +67,13 @@ struct SearchView: View {
                     .padding(.horizontal, 20)
                 
                 if isSearching {
-                    if !movieResults.isEmpty {
-                        gridSection(title: "Films", items: movieResults)
-                    }
-                    if !seriesResults.isEmpty {
-                        gridSection(title: "Séries", items: seriesResults)
-                    }
-                    if movieResults.isEmpty && seriesResults.isEmpty {
+                    if results.isEmpty {
                         Text("Aucun résultat pour « \(query) »")
                             .foregroundStyle(.gray)
                             .frame(maxWidth: .infinity)
                             .padding(.top, 40)
+                    } else {
+                        gridSection(title: "Résultats", items: results)
                     }
                 } else {
                     // 1. Recherches récentes
@@ -231,8 +226,7 @@ struct SearchView: View {
     private func runSearch() async {
         let trimmed = query.trimmingCharacters(in: .whitespaces)
         guard trimmed.count >= 2 else {
-            movieResults = []
-            seriesResults = []
+            results = []
             return
         }
         
@@ -242,8 +236,12 @@ struct SearchView: View {
         async let movies = MovieService.searchMovies(query: trimmed)
         async let series = MovieService.searchTV(query: trimmed)
         
-        movieResults = (try? await movies) ?? []
-        seriesResults = (try? await series) ?? []
+        let m = (try? await movies) ?? []
+        let s = (try? await series) ?? []
+        
+        // Mélange films + séries, triés par date de sortie la plus récente en premier
+        results = (m + s)
+            .sorted { ($0.releaseDate ?? .distantPast) > ($1.releaseDate ?? .distantPast) }
     }
 }
 
