@@ -17,18 +17,24 @@ struct SearchView: View {
         query.trimmingCharacters(in: .whitespaces).count >= 2
     }
     
+    private let columns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
+    
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
+            VStack(alignment: .leading, spacing: 24) {
                 searchBar
                     .padding(.horizontal, 20)
                 
                 if isSearching {
                     if !movieResults.isEmpty {
-                        section(title: "Films", items: movieResults)
+                        gridSection(title: "Films", items: movieResults)
                     }
                     if !seriesResults.isEmpty {
-                        section(title: "Séries", items: seriesResults)
+                        gridSection(title: "Séries", items: seriesResults)
                     }
                     if movieResults.isEmpty && seriesResults.isEmpty {
                         Text("Aucun résultat pour « \(query) »")
@@ -36,14 +42,12 @@ struct SearchView: View {
                             .frame(maxWidth: .infinity)
                             .padding(.top, 40)
                     }
+                } else if classics.isEmpty {
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 60)
                 } else {
-                    if classics.isEmpty {
-                        ProgressView()
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, 60)
-                    } else {
-                        section(title: "Classiques cultes", items: classics)
-                    }
+                    gridSection(title: "Classiques cultes", items: classics)
                 }
             }
             .padding(.top, 16)
@@ -83,26 +87,24 @@ struct SearchView: View {
         .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
     }
     
-    // MARK: - Une section de résultats
+    // MARK: - Grille verticale (haut en bas, sans scroll latéral)
     
-    private func section(title: String, items: [MediaItemEntity]) -> some View {
+    private func gridSection(title: String, items: [MediaItemEntity]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title)
                 .font(.headline)
                 .foregroundStyle(.white)
                 .padding(.horizontal, 20)
             
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(items, id: \.id) { item in
-                        NavigationLink(value: item) {
-                            MediaPosterCard(title: item.title, posterPath: item.posterPath)
-                        }
-                        .buttonStyle(.plain)
+            LazyVGrid(columns: columns, spacing: 16) {
+                ForEach(items, id: \.id) { item in
+                    NavigationLink(value: item) {
+                        PosterGridCard(title: item.title, posterPath: item.posterPath)
                     }
+                    .buttonStyle(.plain)
                 }
-                .padding(.horizontal, 20)
             }
+            .padding(.horizontal, 20)
         }
     }
     
