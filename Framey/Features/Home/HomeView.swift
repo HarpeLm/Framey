@@ -3,7 +3,6 @@ import SwiftData
 
 struct HomeView: View {
     @State private var viewModel = HomeViewModel()
-    @State private var selectedTab: HomeTab = .accueil
     @State private var path = NavigationPath()
     @State private var listOptionsTarget: ListEntity?
     @State private var topSeries: [MediaItemEntity] = []
@@ -36,57 +35,46 @@ struct HomeView: View {
                 
                 VStack(spacing: 0) {
                     HomeTopBar(onSearch: { path.append(HomeRoute.search) })
-                    HomeSegmentBar(selectedTab: $selectedTab)
-                        .padding(.top, 12)
                     
                     ScrollView {
                         VStack(alignment: .leading, spacing: 28) {
-                            if selectedTab == .accueil {
-                                FeaturedHero(movies: heroItems, isLoading: viewModel.isLoading)
-                                
-                                if !viewModel.nowPlaying.isEmpty {
-                                    cinemaSection
-                                }
-                                
-                                if !seriesReleases.isEmpty {
-                                    seriesReleasesRow
-                                }
-                                
-                                if !watchlist.isEmpty {
-                                    MediaRow(title: "À voir ensuite", items: watchlist) { entry in
-                                        AnyView(
-                                            NavigationLink(value: entry.asMediaItem) {
-                                                MediaPosterCard(title: entry.title, posterPath: entry.posterPath)
-                                            }
-                                            .buttonStyle(.plain)
-                                        )
-                                    }
-                                }
-                                
-                                if !watched.isEmpty {
-                                    MediaRow(title: "Vus récemment",
-                                             items: watched,
-                                             onSeeAll: { path.append(HomeRoute.diary) }) { entry in
-                                        AnyView(
-                                            NavigationLink(value: entry.asMediaItem) {
-                                                MediaPosterCard(title: entry.title, posterPath: entry.posterPath, rating: entry.rating)
-                                            }
-                                            .buttonStyle(.plain)
-                                        )
-                                    }
-                                }
-                                
-                                listsRow
-                                
-                            } else if selectedTab == .pourVous {
-                                RecommendationsView()
-                                
-                            } else if selectedTab == .series {
-                                SeriesFeedView()
-                                
-                            } else {
-                                comingSoon(tab: selectedTab)
+                            FeaturedHero(movies: heroItems, isLoading: viewModel.isLoading)
+                            
+                            if !viewModel.nowPlaying.isEmpty {
+                                cinemaSection
                             }
+                            
+                            if !seriesReleases.isEmpty {
+                                seriesReleasesRow
+                            }
+                            
+                            RecommendationsView()
+                            
+                            if !watchlist.isEmpty {
+                                MediaRow(title: "À voir ensuite", items: watchlist) { entry in
+                                    AnyView(
+                                        NavigationLink(value: entry.asMediaItem) {
+                                            MediaPosterCard(title: entry.title, posterPath: entry.posterPath)
+                                        }
+                                        .buttonStyle(.plain)
+                                    )
+                                }
+                            }
+                            
+                            if !watched.isEmpty {
+                                MediaRow(title: "Vus récemment",
+                                         items: watched,
+                                         onSeeAll: { path.append(HomeRoute.diary) }) { entry in
+                                    AnyView(
+                                        NavigationLink(value: entry.asMediaItem) {
+                                            MediaPosterCard(title: entry.title, posterPath: entry.posterPath, rating: entry.rating)
+                                        }
+                                        .buttonStyle(.plain)
+                                    )
+                                }
+                            }
+                            
+                            listsRow
                         }
                         .padding(.top, 16)
                         .padding(.bottom, 40)
@@ -172,8 +160,7 @@ struct HomeView: View {
     
     private var seriesReleasesRow: some View {
         MediaRow(title: "Sorties séries du moment",
-                 items: seriesReleases,
-                 onSeeAll: { selectedTab = .series }) { serie in
+                 items: seriesReleases) { serie in
             AnyView(
                 NavigationLink(value: serie) {
                     MediaPosterCard(title: serie.title, posterPath: serie.posterPath)
@@ -250,19 +237,6 @@ struct HomeView: View {
                 .padding(.horizontal, 20)
             }
         }
-    }
-    
-    private func comingSoon(tab: HomeTab) -> some View {
-        VStack(spacing: 12) {
-            Image(systemName: "sparkles")
-                .font(.largeTitle)
-                .foregroundStyle(.purple)
-            Text("\(tab.title) — bientôt disponible")
-                .font(.headline)
-                .foregroundStyle(.white)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.top, 80)
     }
 }
 
