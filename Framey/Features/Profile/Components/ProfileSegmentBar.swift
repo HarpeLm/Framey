@@ -20,7 +20,7 @@ struct ProfileSegmentBar: View {
                 } label: {
                     VStack(spacing: 6) {
                         Text(tab.title)
-                            .font(.subheadline.weight(selectedTab == tab ? .semibold : .regular))
+                            .font(.caption.weight(selectedTab == tab ? .semibold : .regular))
                             .foregroundStyle(selectedTab == tab ? .white : .gray)
                         Rectangle()
                             .fill(selectedTab == tab ? Color.purple : .clear)
@@ -31,7 +31,7 @@ struct ProfileSegmentBar: View {
                 .frame(maxWidth: .infinity)
             }
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 12)
     }
 }
 

@@ -7,16 +7,27 @@
 
 import SwiftUI
 
+enum MainTab: Hashable {
+    case accueil, films, quick, series, profil
+}
+
 struct MainTabView: View {
+    @State private var selection: MainTab = .accueil
+    @State private var previousTab: MainTab = .accueil
+    @State private var showingQuickLog = false
+    
     var body: some View {
-        TabView {
-            Tab("Accueil", systemImage: "house") {
+        TabView(selection: $selection) {
+            Tab("Accueil", systemImage: "house", value: .accueil) {
                 HomeView()
             }
-            Tab("Films", systemImage: "film") {
+            Tab("Films", systemImage: "film", value: .films) {
                 FilmsView()
             }
-            Tab("Séries", systemImage: "tv") {
+            Tab("", systemImage: "plus.circle.fill", value: .quick) {
+                Color.clear
+            }
+            Tab("Séries", systemImage: "tv", value: .series) {
                 NavigationStack {
                     SeriesFeedView(mode: .tab)
                         .navigationDestination(for: MediaItemEntity.self) { item in
@@ -24,12 +35,21 @@ struct MainTabView: View {
                         }
                 }
             }
-            Tab("Watchlist", systemImage: "eye") {
-                WatchlistView()
-            }
-            Tab("Profil", systemImage: "person") {
+            Tab("Profil", systemImage: "person", value: .profil) {
                 ProfileView()
             }
+        }
+        .onChange(of: selection) { _, new in
+            if new == .quick {
+                showingQuickLog = true
+                selection = previousTab
+            } else {
+                previousTab = new
+            }
+        }
+        .sheet(isPresented: $showingQuickLog) {
+            QuickLogSheet()
+                .preferredColorScheme(.dark)
         }
     }
 }
