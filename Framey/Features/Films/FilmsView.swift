@@ -27,7 +27,6 @@ struct FilmsView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     searchBar
                         .padding(.horizontal, 20)
-                        .padding(.top, 8)
                     
                     if isSearching {
                         if results.isEmpty {
@@ -50,6 +49,7 @@ struct FilmsView: View {
             }
             .background(Color.black.ignoresSafeArea())
             .navigationTitle("Films populaires")
+            .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(for: MediaItemEntity.self) { item in
                 if item.mediaType == .tv {
                     SeriesDetailView(item: item)

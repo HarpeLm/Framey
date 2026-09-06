@@ -50,7 +50,6 @@ struct SeriesFeedView: View {
             VStack(alignment: .leading, spacing: 16) {
                 searchBar
                     .padding(.horizontal, 20)
-                    .padding(.top, 8)
                 
                 if isSearching {
                     if results.isEmpty {
@@ -71,6 +70,7 @@ struct SeriesFeedView: View {
         }
         .background(Color.black.ignoresSafeArea())
         .navigationTitle("Séries populaires")
+        .navigationBarTitleDisplayMode(.inline)
     }
     
     // MARK: - Segment Séries du Home (inchangé)
