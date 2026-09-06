@@ -119,30 +119,57 @@ struct QuickLogSheet: View {
     private var recentSearchesSection: some View {
         VStack(alignment: .leading, spacing: 0) {
             if !recentSearches.isEmpty {
-                Text("Recherches récentes")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.gray)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 16)
-                    .padding(.bottom, 4)
+                HStack {
+                    Text("Recherches récentes")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.gray)
+                    Spacer()
+                    Button("Tout effacer") { clearRecentSearches() }
+                        .font(.caption)
+                        .foregroundStyle(.purple)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                .padding(.bottom, 4)
                 
                 ForEach(recentSearches, id: \.self) { term in
-                    Button {
-                        query = term
-                    } label: {
-                        HStack {
-                            Text(term)
-                                .foregroundStyle(.white)
-                            Spacer()
+                    HStack(spacing: 12) {
+                        Button {
+                            query = term
+                        } label: {
+                            HStack {
+                                Text(term)
+                                    .foregroundStyle(.white)
+                                Spacer()
+                            }
+                            .contentShape(Rectangle())
                         }
-                        .padding(.vertical, 12)
-                        .padding(.horizontal, 20)
+                        .buttonStyle(.plain)
+                        
+                        Button {
+                            removeRecentSearch(term)
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.gray)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 20)
                     Divider().overlay(.white.opacity(0.08)).padding(.leading, 20)
                 }
             }
         }
+    }
+    
+    private func removeRecentSearch(_ term: String) {
+        var current = recentSearches
+        current.removeAll { $0 == term }
+        recentSearches = current
+    }
+    
+    private func clearRecentSearches() {
+        recentSearches = []
     }
     
     private var recentTitlesSection: some View {
