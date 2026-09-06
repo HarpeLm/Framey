@@ -9,48 +9,55 @@ import SwiftUI
 
 struct SearchView: View {
     @State private var query = ""
-    @State private var results: [MediaItemEntity] = []
-    @State private var isSearching = false
-    @FocusState private var keyboardFocused: Bool
+    @State private var movieResults: [MediaItemEntity] = []
+    @State private var seriesResults: [MediaItemEntity] = []
+    @State private var classics: [MediaItemEntity] = []
     
-    private let columns = [
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12)
-    ]
+    private var isSearching: Bool {
+        query.trimmingCharacters(in: .whitespaces).count >= 2
+    }
     
     var body: some View {
         ScrollView {
-            if isSearching {
-                ProgressView()
-                    .padding(.top, 60)
-            } else if results.isEmpty && query.count >= 2 {
-                ContentUnavailableView.search(text: query)
-                    .padding(.top, 60)
-            } else if query.count < 2 {
-                ContentUnavailableView("Rechercher un film",
-                                       systemImage: "magnifyingglass",
-                                       description: Text("Tape au moins 2 caractères"))
-                    .padding(.top, 60)
-            } else {
-                LazyVGrid(columns: columns, spacing: 16) {
-                    ForEach(results, id: \.id) { movie in
-                        NavigationLink(value: movie) {
-                            MediaPosterCard(title: movie.title, posterPath: movie.posterPath)
-                        }
-                        .buttonStyle(.plain)
+            VStack(alignment: .leading, spacing: 28) {
+                searchBar
+                    .padding(.horizontal, 20)
+                
+                if isSearching {
+                    if !movieResults.isEmpty {
+                        section(title: "Films", items: movieResults)
+                    }
+                    if !seriesResults.isEmpty {
+                        section(title: "Séries", items: seriesResults)
+                    }
+                    if movieResults.isEmpty && seriesResults.isEmpty {
+                        Text("Aucun résultat pour « \(query) »")
+                            .foregroundStyle(.gray)
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 40)
+                    }
+                } else {
+                    if classics.isEmpty {
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 60)
+                    } else {
+                        section(title: "Classiques cultes", items: classics)
                     }
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
             }
+            .padding(.top, 16)
+            .padding(.bottom, 40)
         }
         .background(Color.black.ignoresSafeArea())
         .navigationTitle("Recherche")
         .navigationBarTitleDisplayMode(.inline)
-        .safeAreaInset(edge: .top) { searchBar }
-        .task(id: query) { await runSearch() }
-        .onAppear { keyboardFocused = true }
+        .task {
+            classics = (try? await MovieService.fetchTopRatedMovies()) ?? []
+        }
+        .task(id: query) {
+            await runSearch()
+        }
     }
     
     // MARK: - Barre de recherche
@@ -59,13 +66,14 @@ struct SearchView: View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.gray)
-            TextField("Rechercher un film…", text: $query)
-                .focused($keyboardFocused)
+            TextField("Films, séries…", text: $query)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
                 .foregroundStyle(.white)
             if !query.isEmpty {
-                Button { query = "" } label: {
+                Button {
+                    query = ""
+                } label: {
                     Image(systemName: "xmark.circle.fill")
                 }
                 .foregroundStyle(.gray)
@@ -73,27 +81,49 @@ struct SearchView: View {
         }
         .padding(10)
         .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
-        .padding(.horizontal, 20)
-        .padding(.bottom, 8)
-        .background(.black)
     }
     
-    // MARK: - Debounce moderne
+    // MARK: - Une section de résultats
+    
+    private func section(title: String, items: [MediaItemEntity]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.headline)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 20)
+            
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(items, id: \.id) { item in
+                        NavigationLink(value: item) {
+                            MediaPosterCard(title: item.title, posterPath: item.posterPath)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+        }
+    }
+    
+    // MARK: - Recherche unifiée (debounce)
     
     private func runSearch() async {
         let trimmed = query.trimmingCharacters(in: .whitespaces)
         guard trimmed.count >= 2 else {
-            results = []
+            movieResults = []
+            seriesResults = []
             return
         }
-        
-        isSearching = true
-        defer { isSearching = false }
         
         try? await Task.sleep(for: .milliseconds(400))
         guard !Task.isCancelled else { return }
         
-        results = (try? await MovieService.searchMovies(query: trimmed)) ?? []
+        async let movies = MovieService.searchMovies(query: trimmed)
+        async let series = MovieService.searchTV(query: trimmed)
+        
+        movieResults = (try? await movies) ?? []
+        seriesResults = (try? await series) ?? []
     }
 }
 

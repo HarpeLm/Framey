@@ -77,8 +77,13 @@ struct HomeView: View {
                                 }
                                 
                                 listsRow
+                                
+                            } else if selectedTab == .pourVous {
+                                RecommendationsView()
+                                
                             } else if selectedTab == .series {
                                 SeriesFeedView()
+                                
                             } else {
                                 comingSoon(tab: selectedTab)
                             }

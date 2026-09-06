@@ -47,6 +47,16 @@ enum MovieService {
         let (p1, p2, p3) = try await (page1, page2, page3)
         return p1 + p2 + p3
     }
+    
+    static func fetchTopRatedMovies() async throws -> [MediaItemEntity] {
+        let urlString = "https://api.themoviedb.org/3/movie/top_rated?api_key=\(Secrets.tmdbApiKey)&language=fr-FR&page=1"
+        return try await fetchMovies(urlString: urlString)
+    }
+
+    static func fetchRecommendations(for id: Int) async throws -> [MediaItemEntity] {
+        let urlString = "https://api.themoviedb.org/3/movie/\(id)/recommendations?api_key=\(Secrets.tmdbApiKey)&language=fr-FR&page=1"
+        return try await fetchMovies(urlString: urlString)
+    }
 
     private static func fetchPopularPage(_ page: Int) async throws -> [MediaItemEntity] {
         let urlString = "https://api.themoviedb.org/3/movie/popular?api_key=\(Secrets.tmdbApiKey)&language=fr-FR&page=\(page)"
