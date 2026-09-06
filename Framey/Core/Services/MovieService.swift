@@ -48,7 +48,7 @@ enum MovieService {
         return p1 + p2 + p3
     }
     
-    static func fetchMovie(id: Int) async throws -> MediaItemEntity {
+    static func fetchMovie(id: Int) async throws -> TMDBMovie {
         let urlString = "https://api.themoviedb.org/3/movie/\(id)?api_key=\(Secrets.tmdbApiKey)&language=fr-FR"
         
         guard let url = URL(string: urlString) else {
@@ -62,15 +62,7 @@ enum MovieService {
             throw NetworkError.serverError
         }
         
-        let movie = try JSONDecoder().decode(TMDBMovie.self, from: data)
-        return MediaItemEntity(
-            id: movie.id,
-            title: movie.title,
-            releaseDate: movie.release_date?.toDate(),
-            posterPath: movie.poster_path,
-            backdropPath: movie.backdrop_path,
-            overview: movie.overview
-        )
+        return try JSONDecoder().decode(TMDBMovie.self, from: data)
     }
     
     static func fetchTopRatedMovies() async throws -> [MediaItemEntity] {

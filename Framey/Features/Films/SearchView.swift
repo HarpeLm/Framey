@@ -113,21 +113,34 @@ struct SearchView: View {
         .task(id: query) { await runSearch() }
     }
     
-    // MARK: - Chargement des classiques (en parallèle, ordre conservé)
+    // MARK: - Chargement des classiques (Sendable-safe)
     
     private func loadClassics() async {
-        classics = await withTaskGroup(of: MediaItemEntity?.self) { group in
+        // 1. Récupère en parallèle des structs Sendable (TMDBMovie)
+        let movies = await withTaskGroup(of: TMDBMovie?.self) { group in
             for id in Self.classicIds {
                 group.addTask { try? await MovieService.fetchMovie(id: id) }
             }
-            var result: [MediaItemEntity] = []
-            for await item in group {
-                if let item { result.append(item) }
+            var result: [TMDBMovie] = []
+            for await movie in group {
+                if let movie { result.append(movie) }
             }
-            return result.sorted { a, b in
-                (Self.classicIds.firstIndex(of: a.id) ?? 0) < (Self.classicIds.firstIndex(of: b.id) ?? 0)
-            }
+            return result
         }
+        
+        // 2. Convertit en MediaItemEntity sur le main actor, dans l'ordre voulu
+        classics = movies
+            .sorted { (Self.classicIds.firstIndex(of: $0.id) ?? 0) < (Self.classicIds.firstIndex(of: $1.id) ?? 0) }
+            .map { movie in
+                MediaItemEntity(
+                    id: movie.id,
+                    title: movie.title,
+                    releaseDate: movie.release_date?.toDate(),
+                    posterPath: movie.poster_path,
+                    backdropPath: movie.backdrop_path,
+                    overview: movie.overview
+                )
+            }
     }
     
     // MARK: - Barre de recherche
